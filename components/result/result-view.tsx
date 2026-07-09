@@ -22,7 +22,7 @@ interface Props {
   onResizeAnnotation: (annotationNumber: number, x: number, y: number, w: number, h: number) => void
 }
 
-type Edge = "left" | "right" | "top" | "bottom"
+type Corner = "tl" | "tr" | "bl" | "br"
 
 const TIER_META: Record<Tier, { label: string; color: string; ring: string }> = {
   "must-fix": { label: "Must-fix", color: "var(--tr-red)", ring: "var(--tr-red)" },
@@ -77,7 +77,7 @@ export function ResultView({
   } | null>(null)
   const resizeRef = useRef<{
     number: number
-    edge: Edge
+    corner: Corner
     // base geometry captured at grab time
     bx: number
     by: number
@@ -219,7 +219,7 @@ export function ResultView({
   const handleResizeDown = (
     e: React.PointerEvent,
     number: number,
-    edge: Edge,
+    corner: Corner,
     geom: { x: number; y: number; w: number; h: number },
   ) => {
     e.stopPropagation()
@@ -232,7 +232,7 @@ export function ResultView({
     setSelected(number)
     resizeRef.current = {
       number,
-      edge,
+      corner,
       bx: geom.x,
       by: geom.y,
       bw: geom.w,
@@ -250,51 +250,44 @@ export function ResultView({
     if (!st) return
     const pos = toNormalized(e.clientX, e.clientY)
     if (!pos) return
-    const { bx, by, bw, bh, edge } = st
-    const symmetric = e.shiftKey
+    const { bx, by, bw, bh, corner } = st
+    // Alt resizes symmetrically from the center on both axes.
+    const symmetric = e.altKey
+    // Which edges this corner controls.
+    const movesLeft = corner === "tl" || corner === "bl"
+    const movesTop = corner === "tl" || corner === "tr"
+
     let x = bx
     let y = by
     let w = bw
     let h = bh
 
-    if (edge === "right") {
-      if (symmetric) {
-        w = 2 * Math.abs(pos.x - bx)
+    if (symmetric) {
+      // Center stays fixed; both dimensions scale from it.
+      w = 2 * Math.abs(pos.x - bx)
+      h = 2 * Math.abs(pos.y - by)
+    } else {
+      // The opposite corner stays fixed.
+      const left = bx - bw / 2
+      const right = bx + bw / 2
+      const top = by - bh / 2
+      const bottom = by + bh / 2
+
+      if (movesLeft) {
+        w = right - pos.x
+        x = (pos.x + right) / 2
       } else {
-        const left = bx - bw / 2
         w = pos.x - left
         x = (left + pos.x) / 2
       }
-    } else if (edge === "left") {
-      if (symmetric) {
-        w = 2 * Math.abs(bx - pos.x)
+
+      if (movesTop) {
+        h = bottom - pos.y
+        y = (pos.y + bottom) / 2
       } else {
-        const right = bx + bw / 2
-        w = right - pos.x
-        x = (pos.x + right) / 2
-      }
-    } else if (edge === "bottom") {
-      if (symmetric) {
-        h = 2 * Math.abs(pos.y - by)
-      } else {
-        const top = by - bh / 2
         h = pos.y - top
         y = (top + pos.y) / 2
       }
-    } else if (edge === "top") {
-      if (symmetric) {
-        h = 2 * Math.abs(by - pos.y)
-      } else {
-        const bottom = by + bh / 2
-        h = bottom - pos.y
-        y = (pos.y + bottom) / 2
-      }
-    }
-
-    // Symmetric resize keeps the center fixed.
-    if (symmetric) {
-      x = bx
-      y = by
     }
 
     const clamped = clampBox(x, y, w, h)
@@ -450,11 +443,11 @@ export function ResultView({
                 const boxGeom = { x: posX, y: posY, w: boxW, h: boxH }
                 const showBox = isActive || isDragging || isResizing
                 const showHandles = (isActive || isResizing) && !isDragging
-                const handles: { edge: Edge; left: string; top: string; cursor: string }[] = [
-                  { edge: "left", left: "0%", top: "50%", cursor: "ew-resize" },
-                  { edge: "right", left: "100%", top: "50%", cursor: "ew-resize" },
-                  { edge: "top", left: "50%", top: "0%", cursor: "ns-resize" },
-                  { edge: "bottom", left: "50%", top: "100%", cursor: "ns-resize" },
+                const handles: { corner: Corner; left: string; top: string; cursor: string }[] = [
+                  { corner: "tl", left: "0%", top: "0%", cursor: "nwse-resize" },
+                  { corner: "tr", left: "100%", top: "0%", cursor: "nesw-resize" },
+                  { corner: "bl", left: "0%", top: "100%", cursor: "nesw-resize" },
+                  { corner: "br", left: "100%", top: "100%", cursor: "nwse-resize" },
                 ]
                 return (
                   <div key={a.number}>
@@ -474,12 +467,12 @@ export function ResultView({
                         {showHandles &&
                           handles.map((hd) => (
                             <button
-                              key={hd.edge}
+                              key={hd.corner}
                               type="button"
-                              onPointerDown={(e) => handleResizeDown(e, a.number, hd.edge, boxGeom)}
+                              onPointerDown={(e) => handleResizeDown(e, a.number, hd.corner, boxGeom)}
                               onPointerMove={handleResizeMove}
                               onPointerUp={handleResizeUp}
-                              aria-label={`Resize region ${hd.edge} edge. Hold Shift to resize both sides.`}
+                              aria-label={`Resize region ${hd.corner} corner. Hold Alt to resize from the center.`}
                               className="pointer-events-auto absolute h-2.5 w-2.5 touch-none border bg-white"
                               style={{
                                 left: hd.left,
@@ -526,8 +519,8 @@ export function ResultView({
             </div>
           </div>
           <p className="mt-2 text-[11px] text-gray-3">
-            AI places markers approximately — drag a circle to move it, or drag the edge handles to resize its
-            region (hold Shift to resize both sides).
+            AI places markers approximately — drag a circle to move it, or drag the corner handles to resize its
+            region (hold Alt to resize from the center).
           </p>
         </div>
 
