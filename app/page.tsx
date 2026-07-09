@@ -69,10 +69,6 @@ export default function Page() {
     setViewingId((prev) => (prev === id ? null : prev))
   }
 
-  const handleFigmaChange = (id: string, link: string) => {
-    setArtifacts((prev) => prev.map((a) => (a.id === id ? { ...a, figmaLink: link } : a)))
-  }
-
   const runAnalysis = async (authToken: string) => {
     if (!activeArtifact) return
     const target = activeArtifact
@@ -86,7 +82,6 @@ export default function Page() {
           imageBase64: target.dataUrl,
           context: contextText,
           activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
-          figmaLink: target.figmaLink,
           token: authToken,
           count: suggestionCount,
         }),
@@ -184,8 +179,7 @@ export default function Page() {
                   onAdd={handleAdd}
                   onSelect={setActiveId}
                   onRemove={handleRemove}
-                  onFigmaChange={handleFigmaChange}
-                />
+                      />
                 <SkillsPanel
                   skills={skills}
                   onToggle={toggle}

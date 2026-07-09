@@ -19,7 +19,6 @@ export interface Artifact {
   id: string
   name: string
   dataUrl: string // in-memory only, not persisted
-  figmaLink: string
 }
 
 export interface Skill {

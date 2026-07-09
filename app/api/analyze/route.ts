@@ -60,7 +60,6 @@ interface AnalyzeBody {
   imageBase64?: string
   context?: string
   activeSkills?: { name: string; instructions: string }[]
-  figmaLink?: string
   token?: string
   count?: number
 }
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request body." }, { status: 400 })
   }
 
-  const { imageBase64, context, activeSkills = [], figmaLink, token } = body
+  const { imageBase64, context, activeSkills = [], token } = body
   const count = clampCount(body.count)
 
   if (!imageBase64) {
@@ -101,11 +100,9 @@ export async function POST(req: Request) {
     ? `PROJECT & PRODUCT CONTEXT (authoritative — ground your feedback in this):\n${context.trim()}`
     : "No project context was supplied. Where a judgment depends on context you do not have, say so explicitly rather than guessing."
 
-  const figmaBlock = figmaLink?.trim() ? `\n\nReference Figma frame: ${figmaLink.trim()}` : ""
-
   const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.`
 
-  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS LENSES ===\n${lensBlocks}\n\n=== ${contextBlock}${figmaBlock}\n\n${countBlock}`
+  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS LENSES ===\n${lensBlocks}\n\n=== ${contextBlock}\n\n${countBlock}`
 
   // Normalize to a data URL the model can consume as an image part.
   const dataUrl = imageBase64.startsWith("data:")

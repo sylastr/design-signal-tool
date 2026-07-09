@@ -11,7 +11,6 @@ interface Props {
   onAdd: (artifacts: Artifact[]) => void
   onSelect: (id: string) => void
   onRemove: (id: string) => void
-  onFigmaChange: (id: string, link: string) => void
 }
 
 function readFiles(files: FileList | File[]): Promise<Artifact[]> {
@@ -26,7 +25,6 @@ function readFiles(files: FileList | File[]): Promise<Artifact[]> {
               id: uid(),
               name: file.name,
               dataUrl: reader.result as string,
-              figmaLink: "",
             })
           reader.readAsDataURL(file)
         }),
@@ -40,7 +38,6 @@ export function ArtifactIntake({
   onAdd,
   onSelect,
   onRemove,
-  onFigmaChange,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -213,26 +210,6 @@ export function ArtifactIntake({
             )
           })}
         </ul>
-      )}
-
-      {/* Per-artifact Figma link */}
-      {active && (
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="figma-link"
-            className="text-[11px] font-medium uppercase tracking-[0.1em] text-gray-4"
-          >
-            Figma frame link (optional)
-          </label>
-          <input
-            id="figma-link"
-            type="url"
-            value={active.figmaLink}
-            onChange={(e) => onFigmaChange(active.id, e.target.value)}
-            placeholder="https://figma.com/file/…"
-            className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
-          />
-        </div>
       )}
     </section>
   )
