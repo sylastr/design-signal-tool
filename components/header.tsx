@@ -48,9 +48,6 @@ export function Header({ tokenSet = false, onManageToken }: HeaderProps) {
               {tokenSet ? "Token set" : "Add token"}
             </button>
           )}
-          <span className="inline-flex items-center border border-racing-green px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-racing-green">
-            Prototype
-          </span>
         </div>
       </div>
     </header>

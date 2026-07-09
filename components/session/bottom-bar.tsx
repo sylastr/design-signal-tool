@@ -10,6 +10,9 @@ interface Props {
   suggestionCount: number
   onSuggestionCountChange: (n: number) => void
   onAnalyze: () => void
+  analyzedCount: number
+  activeHasResult: boolean
+  onViewResults: () => void
 }
 
 export function BottomBar({
@@ -19,6 +22,9 @@ export function BottomBar({
   suggestionCount,
   onSuggestionCountChange,
   onAnalyze,
+  analyzedCount,
+  activeHasResult,
+  onViewResults,
 }: Props) {
   const status = hasArtifact
     ? `1 artifact selected · ${activeLensCount} ${activeLensCount === 1 ? "lens" : "lenses"} active`
@@ -67,6 +73,16 @@ export function BottomBar({
             </div>
           </div>
 
+          {analyzedCount > 0 && (
+            <button
+              type="button"
+              onClick={onViewResults}
+              className="border border-racing-green px-4 py-2.5 text-sm font-semibold text-racing-green transition-colors hover:bg-gray-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
+            >
+              {`View analysis${analyzedCount > 1 ? ` (${analyzedCount})` : ""}`}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onAnalyze}
@@ -75,7 +91,7 @@ export function BottomBar({
               disabled ? "cursor-not-allowed bg-gray-3" : "bg-tr-orange hover:brightness-95"
             }`}
           >
-            {analyzing ? "Analyzing…" : "Analyze design"}
+            {analyzing ? "Analyzing…" : activeHasResult ? "Re-analyze" : "Analyze design"}
           </button>
         </div>
       </div>

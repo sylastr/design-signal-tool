@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Header } from "@/components/header"
 import { ArtifactIntake } from "@/components/session/artifact-intake"
 import { ContextPanel } from "@/components/session/context-panel"
@@ -25,6 +25,8 @@ export default function Page() {
   // triggers a re-analysis.
   const [results, setResults] = useState<Record<string, CachedResult>>({})
   const [viewingId, setViewingId] = useState<string | null>(null)
+  // Remembers the last analysis viewed so we can return to it from the session.
+  const [lastViewedId, setLastViewedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Open Arena API token — kept in memory only for this session, never persisted.
   const [token, setToken] = useState("")
@@ -140,6 +142,22 @@ export default function Page() {
   const viewing = viewingId ? results[viewingId] : null
   const showResult = viewing != null
 
+  // Keep a memory of the last result actually viewed.
+  useEffect(() => {
+    if (viewingId) setLastViewedId(viewingId)
+  }, [viewingId])
+
+  // Return to an existing analysis without re-running it: prefer the active
+  // artifact's result, then the most recently viewed, then the first analyzed.
+  const handleViewResults = () => {
+    const target =
+      (activeId && results[activeId] && activeId) ||
+      (lastViewedId && results[lastViewedId] && lastViewedId) ||
+      analyzedItems[0]?.id ||
+      null
+    if (target) setViewingId(target)
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Header tokenSet={!!token} onManageToken={() => setTokenModalOpen(true)} />
@@ -202,6 +220,9 @@ export default function Page() {
             suggestionCount={suggestionCount}
             onSuggestionCountChange={setSuggestionCount}
             onAnalyze={handleAnalyze}
+            analyzedCount={analyzedItems.length}
+            activeHasResult={!!(activeId && results[activeId])}
+            onViewResults={handleViewResults}
           />
         </>
       )}
