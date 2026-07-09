@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy } from "lucide-react"
 import type { AnalysisResult, Tier } from "@/lib/types"
 
 interface AnalyzedItem {
@@ -45,6 +45,9 @@ export function ResultView({
   // Tiers the user has toggled off; their markers and cards are hidden.
   const [hiddenTiers, setHiddenTiers] = useState<Set<Tier>>(new Set())
   const cardRefs = useRef<Record<number, HTMLLIElement | null>>({})
+  // Which card was just copied, to show a brief confirmation on its button.
+  const [copiedNumber, setCopiedNumber] = useState<number | null>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Drag-to-reposition state. `dragPos` holds the live position of the marker
   // being dragged so it moves smoothly; it's committed to the parent on release.
@@ -69,6 +72,44 @@ export function ResultView({
     setDragPos(null)
     dragRef.current = null
   }, [currentId])
+
+  // Clear any pending copy-confirmation timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
+
+  const handleCopy = async (a: AnalysisResult["annotations"][number]) => {
+    const text = [
+      `[${TIER_META[a.tier].label} · ${a.skill}]`,
+      a.observation,
+      "",
+      a.rationale,
+      "",
+      `Suggested action: ${a.suggested_action}`,
+    ].join("\n")
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // Fallback for environments without the async clipboard API.
+      const ta = document.createElement("textarea")
+      ta.value = text
+      ta.style.position = "fixed"
+      ta.style.opacity = "0"
+      document.body.appendChild(ta)
+      ta.select()
+      try {
+        document.execCommand("copy")
+      } catch {
+        // ignore — nothing more we can do
+      }
+      document.body.removeChild(ta)
+    }
+    setCopiedNumber(a.number)
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    copyTimeoutRef.current = setTimeout(() => setCopiedNumber(null), 1600)
+  }
 
   const DRAG_THRESHOLD = 3 // px of movement before a press becomes a drag
 
@@ -356,6 +397,28 @@ export function ResultView({
                       <span className="inline-flex items-center border border-gray-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-gray-4">
                         {a.skill}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void handleCopy(a)
+                        }}
+                        aria-label={`Copy feedback ${a.number} to clipboard`}
+                        title="Copy feedback"
+                        className="ml-auto inline-flex items-center gap-1 border border-gray-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-gray-4 transition-colors hover:border-racing-green hover:text-racing-green focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
+                      >
+                        {copiedNumber === a.number ? (
+                          <>
+                            <Check className="h-3 w-3" aria-hidden />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" aria-hidden />
+                            Copy
+                          </>
+                        )}
+                      </button>
                     </div>
                     <p className="text-sm font-bold leading-snug text-graphite">{a.observation}</p>
                     <p className="mt-1.5 text-sm leading-relaxed text-gray-4">{a.rationale}</p>
