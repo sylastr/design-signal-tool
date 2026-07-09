@@ -5,6 +5,7 @@ import { DEFAULT_SKILLS, type SavedContext, type Skill } from "./types"
 
 const CONTEXTS_KEY = "design-signal:contexts"
 const CUSTOM_SKILLS_KEY = "design-signal:custom-skills"
+const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
@@ -26,6 +27,25 @@ function writeJSON<T>(key: string, value: T) {
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10)
+}
+
+/* The working context draft, persisted so it survives refreshes/returns. */
+export function useDraftContext() {
+  const [text, setText] = useState("")
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setText(readJSON<string>(DRAFT_CONTEXT_KEY, ""))
+    setHydrated(true)
+  }, [])
+
+  // Persist only after hydration so we don't overwrite storage with the
+  // initial empty value on first render.
+  useEffect(() => {
+    if (hydrated) writeJSON(DRAFT_CONTEXT_KEY, text)
+  }, [text, hydrated])
+
+  return [text, setText] as const
 }
 
 /* Saved project contexts persisted in localStorage. */

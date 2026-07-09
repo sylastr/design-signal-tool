@@ -8,13 +8,12 @@ import { SkillsPanel } from "@/components/session/skills-panel"
 import { BottomBar } from "@/components/session/bottom-bar"
 import { ResultView } from "@/components/result/result-view"
 import { OpenArenaTokenModal } from "@/components/open-arena-token-modal"
-import { useSavedContexts, useSkills } from "@/lib/storage"
+import { useDraftContext, useSavedContexts, useSkills } from "@/lib/storage"
 import type { AnalysisResult, Artifact } from "@/lib/types"
 
 export default function Page() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [contextText, setContextText] = useState("")
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [resultImage, setResultImage] = useState<string>("")
@@ -24,6 +23,7 @@ export default function Page() {
   const [tokenModalOpen, setTokenModalOpen] = useState(false)
   const [pendingAnalyze, setPendingAnalyze] = useState(false)
 
+  const [contextText, setContextText] = useDraftContext()
   const { contexts, add, update, remove } = useSavedContexts()
   const { skills, toggle, addCustom, removeCustom } = useSkills()
 
