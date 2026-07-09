@@ -163,6 +163,33 @@ export default function Page() {
     })
   }
 
+  // Persist a resized region box (center + size) into the cached result.
+  const handleResizeAnnotation = (
+    artifactId: string,
+    annotationNumber: number,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ) => {
+    setResults((prev) => {
+      const entry = prev[artifactId]
+      if (!entry) return prev
+      return {
+        ...prev,
+        [artifactId]: {
+          ...entry,
+          result: {
+            ...entry.result,
+            annotations: entry.result.annotations.map((a) =>
+              a.number === annotationNumber ? { ...a, location: { x, y, w, h } } : a,
+            ),
+          },
+        },
+      }
+    })
+  }
+
   // Return to an existing analysis without re-running it: prefer the active
   // artifact's result, then the most recently viewed, then the first analyzed.
   const handleViewResults = () => {
@@ -188,6 +215,7 @@ export default function Page() {
             onNavigate={setViewingId}
             onBack={() => setViewingId(null)}
             onMoveAnnotation={(num, x, y) => handleMoveAnnotation(viewingId, num, x, y)}
+            onResizeAnnotation={(num, x, y, w, h) => handleResizeAnnotation(viewingId, num, x, y, w, h)}
           />
         </main>
       ) : (

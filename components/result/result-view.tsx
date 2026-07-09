@@ -19,7 +19,10 @@ interface Props {
   onNavigate: (id: string) => void
   onBack: () => void
   onMoveAnnotation: (annotationNumber: number, x: number, y: number) => void
+  onResizeAnnotation: (annotationNumber: number, x: number, y: number, w: number, h: number) => void
 }
+
+type Edge = "left" | "right" | "top" | "bottom"
 
 const TIER_META: Record<Tier, { label: string; color: string; ring: string }> = {
   "must-fix": { label: "Must-fix", color: "var(--tr-red)", ring: "var(--tr-red)" },
@@ -39,6 +42,7 @@ export function ResultView({
   onNavigate,
   onBack,
   onMoveAnnotation,
+  onResizeAnnotation,
 }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [hovered, setHovered] = useState<number | null>(null)
@@ -62,6 +66,30 @@ export function ResultView({
     y: number
   } | null>(null)
 
+  // Resize-region state. `resizePos` holds the live box geometry while a handle
+  // is being dragged; it's committed to the parent on release.
+  const [resizePos, setResizePos] = useState<{
+    number: number
+    x: number
+    y: number
+    w: number
+    h: number
+  } | null>(null)
+  const resizeRef = useRef<{
+    number: number
+    edge: Edge
+    // base geometry captured at grab time
+    bx: number
+    by: number
+    bw: number
+    bh: number
+    // latest committed geometry
+    x: number
+    y: number
+    w: number
+    h: number
+  } | null>(null)
+
   // The annotation whose region should be revealed: hover takes priority.
   const active = hovered ?? selected
 
@@ -71,6 +99,8 @@ export function ResultView({
     setHovered(null)
     setDragPos(null)
     dragRef.current = null
+    setResizePos(null)
+    resizeRef.current = null
   }, [currentId])
 
   // Clear any pending copy-confirmation timer on unmount.
@@ -172,6 +202,120 @@ export function ResultView({
     }
     dragRef.current = null
     setDragPos(null)
+  }
+
+  // Keep the box within the image and above a minimum size.
+  const clampBox = (x: number, y: number, w: number, h: number) => {
+    const cw = Math.min(1, Math.max(MIN_BOX, w))
+    const ch = Math.min(1, Math.max(MIN_BOX, h))
+    return {
+      w: cw,
+      h: ch,
+      x: Math.min(1 - cw / 2, Math.max(cw / 2, x)),
+      y: Math.min(1 - ch / 2, Math.max(ch / 2, y)),
+    }
+  }
+
+  const handleResizeDown = (
+    e: React.PointerEvent,
+    number: number,
+    edge: Edge,
+    geom: { x: number; y: number; w: number; h: number },
+  ) => {
+    e.stopPropagation()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // capture is best-effort
+    }
+    // Selecting keeps the box/handles visible even if the pointer leaves the marker.
+    setSelected(number)
+    resizeRef.current = {
+      number,
+      edge,
+      bx: geom.x,
+      by: geom.y,
+      bw: geom.w,
+      bh: geom.h,
+      x: geom.x,
+      y: geom.y,
+      w: geom.w,
+      h: geom.h,
+    }
+    setResizePos({ number, ...geom })
+  }
+
+  const handleResizeMove = (e: React.PointerEvent) => {
+    const st = resizeRef.current
+    if (!st) return
+    const pos = toNormalized(e.clientX, e.clientY)
+    if (!pos) return
+    const { bx, by, bw, bh, edge } = st
+    const symmetric = e.shiftKey
+    let x = bx
+    let y = by
+    let w = bw
+    let h = bh
+
+    if (edge === "right") {
+      if (symmetric) {
+        w = 2 * Math.abs(pos.x - bx)
+      } else {
+        const left = bx - bw / 2
+        w = pos.x - left
+        x = (left + pos.x) / 2
+      }
+    } else if (edge === "left") {
+      if (symmetric) {
+        w = 2 * Math.abs(bx - pos.x)
+      } else {
+        const right = bx + bw / 2
+        w = right - pos.x
+        x = (pos.x + right) / 2
+      }
+    } else if (edge === "bottom") {
+      if (symmetric) {
+        h = 2 * Math.abs(pos.y - by)
+      } else {
+        const top = by - bh / 2
+        h = pos.y - top
+        y = (top + pos.y) / 2
+      }
+    } else if (edge === "top") {
+      if (symmetric) {
+        h = 2 * Math.abs(by - pos.y)
+      } else {
+        const bottom = by + bh / 2
+        h = bottom - pos.y
+        y = (pos.y + bottom) / 2
+      }
+    }
+
+    // Symmetric resize keeps the center fixed.
+    if (symmetric) {
+      x = bx
+      y = by
+    }
+
+    const clamped = clampBox(x, y, w, h)
+    st.x = clamped.x
+    st.y = clamped.y
+    st.w = clamped.w
+    st.h = clamped.h
+    setResizePos({ number: st.number, ...clamped })
+  }
+
+  const handleResizeUp = (e: React.PointerEvent) => {
+    const st = resizeRef.current
+    if (!st) return
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // pointer capture may already be released
+    }
+    onResizeAnnotation(st.number, st.x, st.y, st.w, st.h)
+    resizeRef.current = null
+    setResizePos(null)
   }
 
   const toggleTier = (tier: Tier) => {
@@ -295,15 +439,27 @@ export function ResultView({
                 // Use the live drag position for the marker being dragged.
                 const dp = dragPos && dragPos.number === a.number ? dragPos : null
                 const isDragging = dp != null
-                const posX = dp ? dp.x : a.location.x
-                const posY = dp ? dp.y : a.location.y
+                // Use the live resize geometry for the box being resized.
+                const rz = resizePos && resizePos.number === a.number ? resizePos : null
+                const isResizing = rz != null
+                const posX = rz ? rz.x : dp ? dp.x : a.location.x
+                const posY = rz ? rz.y : dp ? dp.y : a.location.y
                 // Enforce a minimum visible region so point markers still get a box.
-                const boxW = Math.max(a.location.w, MIN_BOX)
-                const boxH = Math.max(a.location.h, MIN_BOX)
+                const boxW = rz ? rz.w : Math.max(a.location.w, MIN_BOX)
+                const boxH = rz ? rz.h : Math.max(a.location.h, MIN_BOX)
+                const boxGeom = { x: posX, y: posY, w: boxW, h: boxH }
+                const showBox = isActive || isDragging || isResizing
+                const showHandles = (isActive || isResizing) && !isDragging
+                const handles: { edge: Edge; left: string; top: string; cursor: string }[] = [
+                  { edge: "left", left: "0%", top: "50%", cursor: "ew-resize" },
+                  { edge: "right", left: "100%", top: "50%", cursor: "ew-resize" },
+                  { edge: "top", left: "50%", top: "0%", cursor: "ns-resize" },
+                  { edge: "bottom", left: "50%", top: "100%", cursor: "ns-resize" },
+                ]
                 return (
                   <div key={a.number}>
                     {/* Region box follows the marker while hovered/selected/dragging */}
-                    {(isActive || isDragging) && (
+                    {showBox && (
                       <div
                         className="absolute border-2 border-dashed"
                         style={{
@@ -312,8 +468,30 @@ export function ResultView({
                           width: `${boxW * 100}%`,
                           height: `${boxH * 100}%`,
                           borderColor: meta.color,
+                          zIndex: 2,
                         }}
-                      />
+                      >
+                        {showHandles &&
+                          handles.map((hd) => (
+                            <button
+                              key={hd.edge}
+                              type="button"
+                              onPointerDown={(e) => handleResizeDown(e, a.number, hd.edge, boxGeom)}
+                              onPointerMove={handleResizeMove}
+                              onPointerUp={handleResizeUp}
+                              aria-label={`Resize region ${hd.edge} edge. Hold Shift to resize both sides.`}
+                              className="pointer-events-auto absolute h-2.5 w-2.5 touch-none border bg-white"
+                              style={{
+                                left: hd.left,
+                                top: hd.top,
+                                transform: "translate(-50%, -50%)",
+                                borderColor: meta.color,
+                                cursor: hd.cursor,
+                                zIndex: 4,
+                              }}
+                            />
+                          ))}
+                      </div>
                     )}
                     <button
                       type="button"
@@ -348,7 +526,8 @@ export function ResultView({
             </div>
           </div>
           <p className="mt-2 text-[11px] text-gray-3">
-            AI places markers approximately — drag any circle to correct its position.
+            AI places markers approximately — drag a circle to move it, or drag the edge handles to resize its
+            region (hold Shift to resize both sides).
           </p>
         </div>
 
