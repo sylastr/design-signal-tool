@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Plus } from "lucide-react"
+import { Loader2, Minus, Plus } from "lucide-react"
 import { MAX_SUGGESTIONS, MIN_SUGGESTIONS } from "@/lib/storage"
 
 interface Props {
@@ -87,10 +87,12 @@ export function BottomBar({
             type="button"
             onClick={onAnalyze}
             disabled={disabled}
-            className={`px-5 py-2.5 text-sm font-semibold text-white transition-colors ${
+            aria-busy={analyzing}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white transition-colors ${
               disabled ? "cursor-not-allowed bg-gray-3" : "bg-tr-orange hover:brightness-95"
             }`}
           >
+            {analyzing && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
             {analyzing ? "Analyzing…" : activeHasResult ? "Re-analyze" : "Analyze design"}
           </button>
         </div>

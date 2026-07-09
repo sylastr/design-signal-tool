@@ -33,6 +33,8 @@ const MIN_BOX = 0.08
 export function ResultView({ result, imageUrl, items, currentId, onNavigate, onBack }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [hovered, setHovered] = useState<number | null>(null)
+  // Tiers the user has toggled off; their markers and cards are hidden.
+  const [hiddenTiers, setHiddenTiers] = useState<Set<Tier>>(new Set())
   const cardRefs = useRef<Record<number, HTMLLIElement | null>>({})
 
   // The annotation whose region should be revealed: hover takes priority.
@@ -43,6 +45,17 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
     setSelected(null)
     setHovered(null)
   }, [currentId])
+
+  const toggleTier = (tier: Tier) => {
+    setHiddenTiers((prev) => {
+      const next = new Set(prev)
+      if (next.has(tier)) next.delete(tier)
+      else next.add(tier)
+      return next
+    })
+  }
+
+  const visibleAnnotations = result.annotations.filter((a) => !hiddenTiers.has(a.tier))
 
   useEffect(() => {
     if (selected == null) return
@@ -66,17 +79,37 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Back to session
         </button>
-        <ul className="flex items-center gap-4">
-          {(Object.keys(TIER_META) as Tier[]).map((t) => (
-            <li key={t} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: TIER_META[t].color }}
-                aria-hidden
-              />
-              <span className="text-xs font-medium text-gray-4">{TIER_META[t].label}</span>
-            </li>
-          ))}
+        <ul className="flex items-center gap-2">
+          {(Object.keys(TIER_META) as Tier[]).map((t) => {
+            const hidden = hiddenTiers.has(t)
+            const count = result.annotations.filter((a) => a.tier === t).length
+            return (
+              <li key={t}>
+                <button
+                  type="button"
+                  onClick={() => toggleTier(t)}
+                  aria-pressed={!hidden}
+                  title={hidden ? `Show ${TIER_META[t].label}` : `Hide ${TIER_META[t].label}`}
+                  className={`flex items-center gap-1.5 border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1 ${
+                    hidden ? "border-gray-2 opacity-45 hover:opacity-70" : "border-gray-2 hover:bg-gray-1"
+                  }`}
+                >
+                  <span
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{
+                      backgroundColor: hidden ? "transparent" : TIER_META[t].color,
+                      boxShadow: hidden ? `inset 0 0 0 1.5px ${TIER_META[t].color}` : undefined,
+                    }}
+                    aria-hidden
+                  />
+                  <span className="text-xs font-medium text-gray-4">
+                    {TIER_META[t].label}
+                    {count > 0 && <span className="ml-1 tabular-nums text-gray-3">{count}</span>}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
       </div>
 
@@ -125,7 +158,7 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl || "/placeholder.svg"} alt="Analyzed design artifact" className="block w-full" />
             <div className="pointer-events-none absolute inset-0">
-              {result.annotations.map((a) => {
+              {visibleAnnotations.map((a) => {
                 const meta = TIER_META[a.tier]
                 const isActive = active === a.number
                 // Enforce a minimum visible region so point markers still get a box.
@@ -176,7 +209,12 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
 
         {/* Right: comment cards */}
         <ul className="flex flex-col gap-3">
-          {result.annotations.map((a) => {
+          {visibleAnnotations.length === 0 && (
+            <li className="border border-dashed border-gray-2 p-6 text-center text-sm text-gray-4">
+              All categories hidden. Toggle a category above to show its feedback.
+            </li>
+          )}
+          {visibleAnnotations.map((a) => {
             const meta = TIER_META[a.tier]
             const isActive = active === a.number
             return (
