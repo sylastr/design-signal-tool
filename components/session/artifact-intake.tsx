@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
-import { Upload, X } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Clipboard, Upload, X } from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
 
@@ -45,6 +45,8 @@ export function ArtifactIntake({
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
+  const [pasteHint, setPasteHint] = useState<string | null>(null)
+
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       const next = await readFiles(files)
@@ -52,6 +54,55 @@ export function ArtifactIntake({
     },
     [onAdd],
   )
+
+  // Global Cmd/Ctrl+V paste: pull images out of the clipboard event.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      // Don't hijack paste while typing into a text field.
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) return
+
+      const files = Array.from(e.clipboardData?.items ?? [])
+        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null)
+
+      if (files.length) {
+        e.preventDefault()
+        void handleFiles(files)
+      }
+    }
+    document.addEventListener("paste", onPaste)
+    return () => document.removeEventListener("paste", onPaste)
+  }, [handleFiles])
+
+  // Explicit button using the async Clipboard API (for browsers/contexts where
+  // it's available and permitted).
+  const handleClipboardButton = useCallback(async () => {
+    setPasteHint(null)
+    try {
+      if (!navigator.clipboard?.read) {
+        setPasteHint("Clipboard access isn't available here — try Cmd/Ctrl+V instead.")
+        return
+      }
+      const items = await navigator.clipboard.read()
+      const files: File[] = []
+      for (const item of items) {
+        const type = item.types.find((t) => t.startsWith("image/"))
+        if (type) {
+          const blob = await item.getType(type)
+          files.push(new File([blob], `pasted-${uid()}.${type.split("/")[1] || "png"}`, { type }))
+        }
+      }
+      if (files.length) {
+        await handleFiles(files)
+      } else {
+        setPasteHint("No image found on the clipboard.")
+      }
+    } catch {
+      setPasteHint("Couldn't read the clipboard — try Cmd/Ctrl+V instead.")
+    }
+  }, [handleFiles])
 
   const active = artifacts.find((a) => a.id === activeId) ?? null
 
@@ -89,6 +140,22 @@ export function ArtifactIntake({
           Click to upload
         </button>
         <p className="text-sm text-gray-4">or drag and drop an image (PNG / JPG)</p>
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleClipboardButton}
+            className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-graphite transition-colors hover:border-tr-orange hover:text-tr-orange"
+          >
+            <Clipboard className="h-3.5 w-3.5" aria-hidden />
+            Paste image
+          </button>
+          <span className="text-[11px] text-gray-3">or press Cmd/Ctrl+V</span>
+        </div>
+        {pasteHint && (
+          <p role="status" className="max-w-xs text-[11px] leading-relaxed text-tr-red">
+            {pasteHint}
+          </p>
+        )}
         <p className="max-w-xs text-[11px] leading-relaxed text-gray-3">
           Export PDF pages and Figma frames as images before uploading.
         </p>
