@@ -18,6 +18,7 @@ interface Props {
   currentId: string
   onNavigate: (id: string) => void
   onBack: () => void
+  onMoveAnnotation: (annotationNumber: number, x: number, y: number) => void
 }
 
 const TIER_META: Record<Tier, { label: string; color: string; ring: string }> = {
@@ -30,12 +31,33 @@ const TIER_META: Record<Tier, { label: string; color: string; ring: string }> = 
 // highlight box around the section it points to.
 const MIN_BOX = 0.08
 
-export function ResultView({ result, imageUrl, items, currentId, onNavigate, onBack }: Props) {
+export function ResultView({
+  result,
+  imageUrl,
+  items,
+  currentId,
+  onNavigate,
+  onBack,
+  onMoveAnnotation,
+}: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [hovered, setHovered] = useState<number | null>(null)
   // Tiers the user has toggled off; their markers and cards are hidden.
   const [hiddenTiers, setHiddenTiers] = useState<Set<Tier>>(new Set())
   const cardRefs = useRef<Record<number, HTMLLIElement | null>>({})
+
+  // Drag-to-reposition state. `dragPos` holds the live position of the marker
+  // being dragged so it moves smoothly; it's committed to the parent on release.
+  const imageBoxRef = useRef<HTMLDivElement | null>(null)
+  const [dragPos, setDragPos] = useState<{ number: number; x: number; y: number } | null>(null)
+  const dragRef = useRef<{
+    number: number
+    startX: number
+    startY: number
+    moved: boolean
+    x: number
+    y: number
+  } | null>(null)
 
   // The annotation whose region should be revealed: hover takes priority.
   const active = hovered ?? selected
@@ -44,7 +66,72 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
   useEffect(() => {
     setSelected(null)
     setHovered(null)
+    setDragPos(null)
+    dragRef.current = null
   }, [currentId])
+
+  const DRAG_THRESHOLD = 3 // px of movement before a press becomes a drag
+
+  const toNormalized = (clientX: number, clientY: number) => {
+    const box = imageBoxRef.current
+    if (!box) return null
+    const rect = box.getBoundingClientRect()
+    return {
+      x: Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (clientY - rect.top) / rect.height)),
+    }
+  }
+
+  const handlePointerDown = (e: React.PointerEvent, number: number) => {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // capture is best-effort; dragging still works via the move/up handlers
+    }
+    const start = toNormalized(e.clientX, e.clientY)
+    dragRef.current = {
+      number,
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+      x: start?.x ?? 0,
+      y: start?.y ?? 0,
+    }
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const st = dragRef.current
+    if (!st) return
+    if (!st.moved) {
+      if (Math.abs(e.clientX - st.startX) < DRAG_THRESHOLD && Math.abs(e.clientY - st.startY) < DRAG_THRESHOLD)
+        return
+      st.moved = true
+    }
+    const pos = toNormalized(e.clientX, e.clientY)
+    if (pos) {
+      st.x = pos.x
+      st.y = pos.y
+      setDragPos({ number: st.number, x: pos.x, y: pos.y })
+    }
+  }
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const st = dragRef.current
+    if (!st) return
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // pointer capture may already be released
+    }
+    if (st.moved) {
+      onMoveAnnotation(st.number, st.x, st.y)
+    } else {
+      // Treated as a click: select the marker.
+      setSelected(st.number)
+    }
+    dragRef.current = null
+    setDragPos(null)
+  }
 
   const toggleTier = (tier: Tier) => {
     setHiddenTiers((prev) => {
@@ -154,25 +241,33 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* Left: image with overlay */}
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <div className="relative inline-block w-full border border-gray-2 bg-gray-1">
+          <div
+            ref={imageBoxRef}
+            className="relative inline-block w-full select-none border border-gray-2 bg-gray-1"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl || "/placeholder.svg"} alt="Analyzed design artifact" className="block w-full" />
             <div className="pointer-events-none absolute inset-0">
               {visibleAnnotations.map((a) => {
                 const meta = TIER_META[a.tier]
                 const isActive = active === a.number
+                // Use the live drag position for the marker being dragged.
+                const dp = dragPos && dragPos.number === a.number ? dragPos : null
+                const isDragging = dp != null
+                const posX = dp ? dp.x : a.location.x
+                const posY = dp ? dp.y : a.location.y
                 // Enforce a minimum visible region so point markers still get a box.
                 const boxW = Math.max(a.location.w, MIN_BOX)
                 const boxH = Math.max(a.location.h, MIN_BOX)
                 return (
                   <div key={a.number}>
-                    {/* Region box appears only for the hovered/selected marker */}
-                    {isActive && (
+                    {/* Region box follows the marker while hovered/selected/dragging */}
+                    {(isActive || isDragging) && (
                       <div
-                        className="absolute border-2 border-dashed transition-opacity"
+                        className="absolute border-2 border-dashed"
                         style={{
-                          left: `${(a.location.x - boxW / 2) * 100}%`,
-                          top: `${(a.location.y - boxH / 2) * 100}%`,
+                          left: `${(posX - boxW / 2) * 100}%`,
+                          top: `${(posY - boxH / 2) * 100}%`,
                           width: `${boxW * 100}%`,
                           height: `${boxH * 100}%`,
                           borderColor: meta.color,
@@ -181,21 +276,27 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
                     )}
                     <button
                       type="button"
-                      onClick={() => setSelected(a.number)}
+                      onPointerDown={(e) => handlePointerDown(e, a.number)}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
                       onMouseEnter={() => setHovered(a.number)}
                       onMouseLeave={() => setHovered(null)}
-                      aria-label={`Annotation ${a.number}: ${meta.label}`}
-                      className="pointer-events-auto absolute flex items-center justify-center rounded-full font-bold text-white transition-transform"
+                      aria-label={`Annotation ${a.number}: ${meta.label}. Drag to reposition.`}
+                      className={`pointer-events-auto absolute flex touch-none items-center justify-center rounded-full font-bold text-white ${
+                        isDragging ? "cursor-grabbing" : "cursor-grab"
+                      }`}
                       style={{
-                        left: `${a.location.x * 100}%`,
-                        top: `${a.location.y * 100}%`,
+                        left: `${posX * 100}%`,
+                        top: `${posY * 100}%`,
                         width: "28px",
                         height: "28px",
-                        transform: `translate(-50%, -50%) scale(${isActive ? 1.25 : 1})`,
+                        transform: `translate(-50%, -50%) scale(${isActive || isDragging ? 1.25 : 1})`,
                         backgroundColor: meta.color,
-                        boxShadow: isActive ? "0 0 0 3px #fff, 0 0 0 5px " + meta.color : "0 0 0 2px #fff",
+                        boxShadow:
+                          isActive || isDragging ? "0 0 0 3px #fff, 0 0 0 5px " + meta.color : "0 0 0 2px #fff",
                         fontSize: "13px",
-                        zIndex: isActive ? 2 : 1,
+                        zIndex: isActive || isDragging ? 3 : 1,
+                        transition: isDragging ? "none" : "transform 120ms",
                       }}
                     >
                       {a.number}
@@ -205,6 +306,9 @@ export function ResultView({ result, imageUrl, items, currentId, onNavigate, onB
               })}
             </div>
           </div>
+          <p className="mt-2 text-[11px] text-gray-3">
+            AI places markers approximately — drag any circle to correct its position.
+          </p>
         </div>
 
         {/* Right: comment cards */}

@@ -142,6 +142,27 @@ export default function Page() {
     if (viewingId) setLastViewedId(viewingId)
   }, [viewingId])
 
+  // Persist a dragged marker's new position into the cached result so it
+  // survives navigation between analyses.
+  const handleMoveAnnotation = (artifactId: string, annotationNumber: number, x: number, y: number) => {
+    setResults((prev) => {
+      const entry = prev[artifactId]
+      if (!entry) return prev
+      return {
+        ...prev,
+        [artifactId]: {
+          ...entry,
+          result: {
+            ...entry.result,
+            annotations: entry.result.annotations.map((a) =>
+              a.number === annotationNumber ? { ...a, location: { ...a.location, x, y } } : a,
+            ),
+          },
+        },
+      }
+    })
+  }
+
   // Return to an existing analysis without re-running it: prefer the active
   // artifact's result, then the most recently viewed, then the first analyzed.
   const handleViewResults = () => {
@@ -166,6 +187,7 @@ export default function Page() {
             currentId={viewingId}
             onNavigate={setViewingId}
             onBack={() => setViewingId(null)}
+            onMoveAnnotation={(num, x, y) => handleMoveAnnotation(viewingId, num, x, y)}
           />
         </main>
       ) : (
