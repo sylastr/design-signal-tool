@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design Signal — Swiss / Functionalist working tool.
+ * Thomson Reuters brand tokens. High contrast, hairline borders, no gradients.
+ */
+:root {
+  --tr-orange: #d64000;
+  --tr-red: #c81e3a;
+  --racing-green: #123015;
+  --racing-green-light: #1c4a22;
+  --graphite: #14181f;
+  --gray-1: #f2f2f2;
+  --gray-2: #d9d9d9;
+  --gray-3: #a6a6a6;
+  --gray-4: #595959;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #ffffff;
+  color: var(--graphite);
+  font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Thin custom scrollbars for the Swiss look. */
+.ds-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-3) transparent;
+}
+.ds-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.ds-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--gray-3);
+}
