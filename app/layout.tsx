@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
+import { SuppressResizeObserverError } from "@/components/suppress-resize-observer-error"
 
 export const metadata: Metadata = {
   title: "Design Signal — design review, on the spot",
@@ -20,7 +21,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SuppressResizeObserverError />
+        {children}
+      </body>
     </html>
   )
 }
