@@ -7,6 +7,7 @@ import { ContextPanel } from "@/components/session/context-panel"
 import { SkillsPanel } from "@/components/session/skills-panel"
 import { BottomBar } from "@/components/session/bottom-bar"
 import { ResultView } from "@/components/result/result-view"
+import { OpenArenaTokenModal } from "@/components/open-arena-token-modal"
 import { useSavedContexts, useSkills } from "@/lib/storage"
 import type { AnalysisResult, Artifact } from "@/lib/types"
 
@@ -18,6 +19,10 @@ export default function Page() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [resultImage, setResultImage] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
+  // Open Arena API token — kept in memory only for this session, never persisted.
+  const [token, setToken] = useState("")
+  const [tokenModalOpen, setTokenModalOpen] = useState(false)
+  const [pendingAnalyze, setPendingAnalyze] = useState(false)
 
   const { contexts, add, update, remove } = useSavedContexts()
   const { skills, toggle, addCustom, removeCustom } = useSkills()
@@ -49,7 +54,7 @@ export default function Page() {
     setArtifacts((prev) => prev.map((a) => (a.id === id ? { ...a, figmaLink: link } : a)))
   }
 
-  const handleAnalyze = async () => {
+  const runAnalysis = async (authToken: string) => {
     if (!activeArtifact) return
     setAnalyzing(true)
     setError(null)
@@ -62,10 +67,17 @@ export default function Page() {
           context: contextText,
           activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
           figmaLink: activeArtifact.figmaLink,
+          token: authToken,
         }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
+        // Token was missing/invalid — clear it and re-prompt.
+        if (res.status === 401) {
+          setToken("")
+          setPendingAnalyze(true)
+          setTokenModalOpen(true)
+        }
         throw new Error(data.error || "Analysis failed.")
       }
       const data: AnalysisResult = await res.json()
@@ -78,11 +90,30 @@ export default function Page() {
     }
   }
 
+  const handleAnalyze = () => {
+    if (!activeArtifact) return
+    // Gate AI features behind an Open Arena token.
+    if (!token) {
+      setPendingAnalyze(true)
+      setTokenModalOpen(true)
+      return
+    }
+    void runAnalysis(token)
+  }
+
+  const handleSaveToken = (next: string) => {
+    setToken(next)
+    if (pendingAnalyze) {
+      setPendingAnalyze(false)
+      void runAnalysis(next)
+    }
+  }
+
   const showResult = result !== null
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <Header tokenSet={!!token} onManageToken={() => setTokenModalOpen(true)} />
 
       {showResult ? (
         <main>
@@ -136,6 +167,16 @@ export default function Page() {
           />
         </>
       )}
+
+      <OpenArenaTokenModal
+        open={tokenModalOpen}
+        onOpenChange={(next) => {
+          setTokenModalOpen(next)
+          if (!next) setPendingAnalyze(false)
+        }}
+        onSave={handleSaveToken}
+        initialValue={token}
+      />
     </div>
   )
 }

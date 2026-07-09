@@ -1,7 +1,15 @@
 import { generateObject } from "ai"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { z } from "zod"
 
 export const maxDuration = 60
+
+// Thomson Reuters Open Arena exposes an OpenAI-compatible surface. The base URL
+// and model are configurable via env so the deployment can target the correct
+// Open Arena gateway; sensible defaults keep local development working.
+const OPEN_ARENA_BASE_URL =
+  process.env.OPEN_ARENA_BASE_URL ?? "https://aiopenarena.gcs.int.thomsonreuters.com/v1"
+const OPEN_ARENA_MODEL = process.env.OPEN_ARENA_MODEL ?? "gpt-4o"
 
 const annotationSchema = z.object({
   number: z.number().int().describe("Sequential 1-based index of the annotation, ranked by impact."),
@@ -45,6 +53,7 @@ interface AnalyzeBody {
   context?: string
   activeSkills?: { name: string; instructions: string }[]
   figmaLink?: string
+  token?: string
 }
 
 export async function POST(req: Request) {
@@ -55,10 +64,18 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request body." }, { status: 400 })
   }
 
-  const { imageBase64, context, activeSkills = [], figmaLink } = body
+  const { imageBase64, context, activeSkills = [], figmaLink, token } = body
 
   if (!imageBase64) {
     return Response.json({ error: "No artifact image provided." }, { status: 400 })
+  }
+
+  const trimmedToken = token?.trim()
+  if (!trimmedToken) {
+    return Response.json(
+      { error: "Open Arena token required. Add your token to enable AI features." },
+      { status: 401 },
+    )
   }
 
   const lensBlocks =
@@ -81,9 +98,16 @@ export async function POST(req: Request) {
     ? imageBase64
     : `data:image/png;base64,${imageBase64}`
 
+  const openArena = createOpenAICompatible({
+    name: "open-arena",
+    baseURL: OPEN_ARENA_BASE_URL,
+    apiKey: trimmedToken,
+    supportsStructuredOutputs: true,
+  })
+
   try {
     const { object } = await generateObject({
-      model: "anthropic/claude-sonnet-4.5",
+      model: openArena(OPEN_ARENA_MODEL),
       schema: resultSchema,
       maxRetries: 2,
       system,
@@ -115,10 +139,21 @@ export async function POST(req: Request) {
 
     return Response.json({ ...object, annotations })
   } catch (err) {
-    console.log("[v0] /api/analyze error:", err instanceof Error ? err.message : err)
-    return Response.json(
-      { error: "Analysis failed. Please try again." },
-      { status: 500 },
-    )
+    const message = err instanceof Error ? err.message : String(err)
+    console.log("[v0] /api/analyze error:", message)
+
+    // Surface authentication failures distinctly so the UI can re-prompt for a token.
+    const status =
+      typeof (err as { statusCode?: number })?.statusCode === "number"
+        ? (err as { statusCode: number }).statusCode
+        : undefined
+    if (status === 401 || status === 403 || /unauthorized|forbidden|invalid.*(api key|token)/i.test(message)) {
+      return Response.json(
+        { error: "Open Arena rejected the token. Check it and try again.", code: "invalid_token" },
+        { status: 401 },
+      )
+    }
+
+    return Response.json({ error: "Analysis failed. Please try again." }, { status: 500 })
   }
 }

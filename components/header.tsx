@@ -1,4 +1,13 @@
-export function Header() {
+"use client"
+
+import { KeyRound, Check } from "lucide-react"
+
+interface HeaderProps {
+  tokenSet?: boolean
+  onManageToken?: () => void
+}
+
+export function Header({ tokenSet = false, onManageToken }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40">
       {/* 4px TR Orange bar across the very top */}
@@ -23,9 +32,26 @@ export function Header() {
             </span>
           </div>
         </div>
-        <span className="inline-flex items-center border border-racing-green px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-racing-green">
-          Prototype
-        </span>
+
+        <div className="flex items-center gap-3">
+          {onManageToken && (
+            <button
+              type="button"
+              onClick={onManageToken}
+              className="inline-flex items-center gap-1.5 border border-gray-3 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-graphite transition-colors hover:bg-gray-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
+            >
+              {tokenSet ? (
+                <Check className="h-3.5 w-3.5 text-racing-green" aria-hidden />
+              ) : (
+                <KeyRound className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
+              )}
+              {tokenSet ? "Token set" : "Add token"}
+            </button>
+          )}
+          <span className="inline-flex items-center border border-racing-green px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-racing-green">
+            Prototype
+          </span>
+        </div>
       </div>
     </header>
   )
