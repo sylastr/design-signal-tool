@@ -7,12 +7,12 @@ const annotationSchema = z.object({
   number: z.number().int().describe("Sequential 1-based index of the annotation, ranked by impact."),
   location: z
     .object({
-      x: z.number().min(0).max(1).describe("Center X, normalized 0-1 across the image width."),
-      y: z.number().min(0).max(1).describe("Center Y, normalized 0-1 across the image height."),
-      w: z.number().min(0).max(1).describe("Bounding box width, normalized 0-1. Use ~0.02 for a point marker."),
-      h: z.number().min(0).max(1).describe("Bounding box height, normalized 0-1. Use ~0.02 for a point marker."),
+      x: z.number().describe("Center X, normalized 0-1 across the image width."),
+      y: z.number().describe("Center Y, normalized 0-1 across the image height."),
+      w: z.number().describe("Bounding box width, normalized 0-1. Use ~0.02 for a point marker."),
+      h: z.number().describe("Bounding box height, normalized 0-1. Use ~0.02 for a point marker."),
     })
-    .describe("Location of the issue in the artifact. x,y is the CENTER point."),
+    .describe("Location of the issue in the artifact. x,y is the CENTER point, all values normalized 0-1."),
   tier: z
     .enum(["must-fix", "should-consider", "nice-to-have"])
     .describe("Severity tier ranked by impact."),
@@ -24,8 +24,17 @@ const annotationSchema = z.object({
 
 const resultSchema = z.object({
   artifact_summary: z.string().describe("One line describing what this artifact is."),
-  annotations: z.array(annotationSchema).min(1).max(8),
+  annotations: z
+    .array(annotationSchema)
+    .describe("Prioritized critique items, ranked by impact. Aim for 5-8 items."),
 })
+
+// Clamp a value into the 0-1 range; falls back to a sensible default if the
+// model returns a non-finite number so the overlay never breaks.
+function clamp01(value: number, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback
+  return Math.min(1, Math.max(0, value))
+}
 
 const BASE_ROLE = `You are acting as an extension of a Principal Designer, reviewing a teammate's design in real time during a working session. Your feedback will be read in the moment — be precise, opinionated where warranted, and never generic. Ground every observation in a named principle or the supplied project context — never a bare opinion. Anchor each item to a specific location in the artifact. Tier each item must-fix / should-consider / nice-to-have. Keep each item to 1-3 sentences. If context is insufficient to judge something, say so explicitly rather than guessing. Surface at most 5-8 points per artifact, ranked by impact.
 
@@ -76,6 +85,7 @@ export async function POST(req: Request) {
     const { object } = await generateObject({
       model: "anthropic/claude-sonnet-4.5",
       schema: resultSchema,
+      maxRetries: 2,
       system,
       messages: [
         {
@@ -91,8 +101,17 @@ export async function POST(req: Request) {
       ],
     })
 
-    // Ensure numbers are sequential and stable for the UI.
-    const annotations = object.annotations.map((a, i) => ({ ...a, number: i + 1 }))
+    // Ensure numbers are sequential/stable and locations are safely in 0-1 for the UI.
+    const annotations = object.annotations.map((a, i) => ({
+      ...a,
+      number: i + 1,
+      location: {
+        x: clamp01(a.location.x, 0.5),
+        y: clamp01(a.location.y, 0.5),
+        w: clamp01(a.location.w, 0.02),
+        h: clamp01(a.location.h, 0.02),
+      },
+    }))
 
     return Response.json({ ...object, annotations })
   } catch (err) {
