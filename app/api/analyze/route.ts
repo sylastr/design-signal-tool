@@ -154,6 +154,18 @@ export async function POST(req: Request) {
       )
     }
 
+    // The Open Arena host is internal to Thomson Reuters and is not reachable
+    // from this environment (DNS/connection failure). Make that explicit.
+    if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|cannot connect to api|fetch failed|getaddrinfo/i.test(message)) {
+      return Response.json(
+        {
+          error: `Can't reach the Open Arena endpoint (${OPEN_ARENA_BASE_URL}). It looks like an internal Thomson Reuters address that isn't reachable from here — connect to the TR network/VPN or set OPEN_ARENA_BASE_URL to a publicly reachable gateway.`,
+          code: "unreachable",
+        },
+        { status: 502 },
+      )
+    }
+
     return Response.json({ error: "Analysis failed. Please try again." }, { status: 500 })
   }
 }
