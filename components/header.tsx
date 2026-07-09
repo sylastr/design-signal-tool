@@ -19,7 +19,7 @@ export function Header() {
               Design Signal
             </span>
             <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-gray-4">
-              Principal design review, on the spot
+              design review, on the spot
             </span>
           </div>
         </div>
