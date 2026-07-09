@@ -92,12 +92,9 @@ export default function Page() {
 
   const handleAnalyze = () => {
     if (!activeArtifact) return
-    // Gate AI features behind an Open Arena token.
-    if (!token) {
-      setPendingAnalyze(true)
-      setTokenModalOpen(true)
-      return
-    }
+    // Analysis runs against the AI Gateway by default; a token is only needed
+    // if the deployment is configured to route through Open Arena, in which case
+    // the API responds 401 and we prompt for one.
     void runAnalysis(token)
   }
 

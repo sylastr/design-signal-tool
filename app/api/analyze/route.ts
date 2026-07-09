@@ -4,12 +4,15 @@ import { z } from "zod"
 
 export const maxDuration = 60
 
-// Thomson Reuters Open Arena exposes an OpenAI-compatible surface. The base URL
-// and model are configurable via env so the deployment can target the correct
-// Open Arena gateway; sensible defaults keep local development working.
-const OPEN_ARENA_BASE_URL =
-  process.env.OPEN_ARENA_BASE_URL ?? "https://aiopenarena.gcs.int.thomsonreuters.com/v1"
-const OPEN_ARENA_MODEL = process.env.OPEN_ARENA_MODEL ?? "gpt-4o"
+// Thomson Reuters Open Arena exposes an OpenAI-compatible surface, but its host
+// is internal to TR and is not reachable from public environments. We therefore
+// only route through Open Arena when OPEN_ARENA_BASE_URL is explicitly set to a
+// reachable gateway. Otherwise we fall back to the zero-config Vercel AI Gateway
+// (Claude), which works in the preview and on public deployments.
+const OPEN_ARENA_BASE_URL = process.env.OPEN_ARENA_BASE_URL?.trim()
+const OPEN_ARENA_MODEL = process.env.OPEN_ARENA_MODEL?.trim() || "gpt-4o"
+const FALLBACK_MODEL = "anthropic/claude-sonnet-4.5"
+const useOpenArena = Boolean(OPEN_ARENA_BASE_URL)
 
 const annotationSchema = z.object({
   number: z.number().int().describe("Sequential 1-based index of the annotation, ranked by impact."),
@@ -71,7 +74,9 @@ export async function POST(req: Request) {
   }
 
   const trimmedToken = token?.trim()
-  if (!trimmedToken) {
+  // A token is only required when routing through Open Arena. The AI Gateway
+  // fallback authenticates via the platform, so no user token is needed there.
+  if (useOpenArena && !trimmedToken) {
     return Response.json(
       { error: "Open Arena token required. Add your token to enable AI features." },
       { status: 401 },
@@ -98,16 +103,21 @@ export async function POST(req: Request) {
     ? imageBase64
     : `data:image/png;base64,${imageBase64}`
 
-  const openArena = createOpenAICompatible({
-    name: "open-arena",
-    baseURL: OPEN_ARENA_BASE_URL,
-    apiKey: trimmedToken,
-    supportsStructuredOutputs: true,
-  })
+  // Route through Open Arena when a reachable URL is configured; otherwise fall
+  // back to the Vercel AI Gateway (Claude) so analysis works everywhere.
+  const model =
+    useOpenArena && OPEN_ARENA_BASE_URL
+      ? createOpenAICompatible({
+          name: "open-arena",
+          baseURL: OPEN_ARENA_BASE_URL,
+          apiKey: trimmedToken,
+          supportsStructuredOutputs: true,
+        })(OPEN_ARENA_MODEL)
+      : FALLBACK_MODEL
 
   try {
     const { object } = await generateObject({
-      model: openArena(OPEN_ARENA_MODEL),
+      model,
       schema: resultSchema,
       maxRetries: 2,
       system,
