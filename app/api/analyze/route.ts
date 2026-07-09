@@ -37,8 +37,13 @@ const resultSchema = z.object({
   artifact_summary: z.string().describe("One line describing what this artifact is."),
   annotations: z
     .array(annotationSchema)
-    .describe("Prioritized critique items, ranked by impact. Aim for 5-8 items."),
+    .describe("Prioritized critique items, ranked by impact. Return exactly the requested number of items."),
 })
+
+function clampCount(n: unknown) {
+  const num = typeof n === "number" && Number.isFinite(n) ? Math.round(n) : 3
+  return Math.min(7, Math.max(1, num))
+}
 
 // Clamp a value into the 0-1 range; falls back to a sensible default if the
 // model returns a non-finite number so the overlay never breaks.
@@ -47,7 +52,7 @@ function clamp01(value: number, fallback: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-const BASE_ROLE = `You are acting as an extension of a Principal Designer, reviewing a teammate's design in real time during a working session. Your feedback will be read in the moment — be precise, opinionated where warranted, and never generic. Ground every observation in a named principle or the supplied project context — never a bare opinion. Anchor each item to a specific location in the artifact. Tier each item must-fix / should-consider / nice-to-have. Keep each item to 1-3 sentences. If context is insufficient to judge something, say so explicitly rather than guessing. Surface at most 5-8 points per artifact, ranked by impact.
+const BASE_ROLE = `You are acting as an extension of a Principal Designer, reviewing a teammate's design in real time during a working session. Your feedback will be read in the moment — be precise, opinionated where warranted, and never generic. Ground every observation in a named principle or the supplied project context — never a bare opinion. Anchor each item to a specific location in the artifact. Tier each item must-fix / should-consider / nice-to-have. Keep each item to 1-3 sentences. If context is insufficient to judge something, say so explicitly rather than guessing. Rank items by impact, surfacing the highest-impact issues first.
 
 For each item, provide a normalized location (x, y as the CENTER point, plus w, h for a bounding box, all in the range 0-1 relative to the image). Use a small w/h (around 0.02) when the issue is a single point; use a larger box when the issue spans a region.`
 
@@ -57,6 +62,7 @@ interface AnalyzeBody {
   activeSkills?: { name: string; instructions: string }[]
   figmaLink?: string
   token?: string
+  count?: number
 }
 
 export async function POST(req: Request) {
@@ -68,6 +74,7 @@ export async function POST(req: Request) {
   }
 
   const { imageBase64, context, activeSkills = [], figmaLink, token } = body
+  const count = clampCount(body.count)
 
   if (!imageBase64) {
     return Response.json({ error: "No artifact image provided." }, { status: 400 })
@@ -96,7 +103,9 @@ export async function POST(req: Request) {
 
   const figmaBlock = figmaLink?.trim() ? `\n\nReference Figma frame: ${figmaLink.trim()}` : ""
 
-  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS LENSES ===\n${lensBlocks}\n\n=== ${contextBlock}${figmaBlock}`
+  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.`
+
+  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS LENSES ===\n${lensBlocks}\n\n=== ${contextBlock}${figmaBlock}\n\n${countBlock}`
 
   // Normalize to a data URL the model can consume as an image part.
   const dataUrl = imageBase64.startsWith("data:")
@@ -127,7 +136,7 @@ export async function POST(req: Request) {
           content: [
             {
               type: "text",
-              text: "Review this design artifact now. Return your prioritized, tiered, location-anchored critique.",
+              text: `Review this design artifact now. Return your prioritized, tiered, location-anchored critique with EXACTLY ${count} annotation${count === 1 ? "" : "s"}.`,
             },
             { type: "file", data: dataUrl, mediaType: "image/png" },
           ],
@@ -135,8 +144,9 @@ export async function POST(req: Request) {
       ],
     })
 
-    // Ensure numbers are sequential/stable and locations are safely in 0-1 for the UI.
-    const annotations = object.annotations.map((a, i) => ({
+    // Enforce the requested count as a hard cap, then ensure numbers are
+    // sequential/stable and locations are safely in 0-1 for the UI.
+    const annotations = object.annotations.slice(0, count).map((a, i) => ({
       ...a,
       number: i + 1,
       location: {

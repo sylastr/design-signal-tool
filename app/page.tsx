@@ -8,15 +8,23 @@ import { SkillsPanel } from "@/components/session/skills-panel"
 import { BottomBar } from "@/components/session/bottom-bar"
 import { ResultView } from "@/components/result/result-view"
 import { OpenArenaTokenModal } from "@/components/open-arena-token-modal"
-import { useDraftContext, useSavedContexts, useSkills } from "@/lib/storage"
+import { useDraftContext, useSavedContexts, useSkills, useSuggestionCount } from "@/lib/storage"
 import type { AnalysisResult, Artifact } from "@/lib/types"
+
+interface CachedResult {
+  result: AnalysisResult
+  imageUrl: string
+  name: string
+}
 
 export default function Page() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
-  const [resultImage, setResultImage] = useState<string>("")
+  // Analysis results cached per artifact id, so navigating between them never
+  // triggers a re-analysis.
+  const [results, setResults] = useState<Record<string, CachedResult>>({})
+  const [viewingId, setViewingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Open Arena API token — kept in memory only for this session, never persisted.
   const [token, setToken] = useState("")
@@ -24,6 +32,7 @@ export default function Page() {
   const [pendingAnalyze, setPendingAnalyze] = useState(false)
 
   const [contextText, setContextText] = useDraftContext()
+  const [suggestionCount, setSuggestionCount] = useSuggestionCount()
   const { contexts, add, update, remove } = useSavedContexts()
   const { skills, toggle, addCustom, removeCustom } = useSkills()
 
@@ -48,6 +57,14 @@ export default function Page() {
       const remaining = artifacts.filter((a) => a.id !== id)
       return remaining[0]?.id ?? null
     })
+    // Drop any cached analysis for the removed artifact.
+    setResults((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setViewingId((prev) => (prev === id ? null : prev))
   }
 
   const handleFigmaChange = (id: string, link: string) => {
@@ -56,6 +73,7 @@ export default function Page() {
 
   const runAnalysis = async (authToken: string) => {
     if (!activeArtifact) return
+    const target = activeArtifact
     setAnalyzing(true)
     setError(null)
     try {
@@ -63,11 +81,12 @@ export default function Page() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: activeArtifact.dataUrl,
+          imageBase64: target.dataUrl,
           context: contextText,
           activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
-          figmaLink: activeArtifact.figmaLink,
+          figmaLink: target.figmaLink,
           token: authToken,
+          count: suggestionCount,
         }),
       })
       if (!res.ok) {
@@ -81,8 +100,12 @@ export default function Page() {
         throw new Error(data.error || "Analysis failed.")
       }
       const data: AnalysisResult = await res.json()
-      setResult(data)
-      setResultImage(activeArtifact.dataUrl)
+      // Cache the result under this artifact's id and view it.
+      setResults((prev) => ({
+        ...prev,
+        [target.id]: { result: data, imageUrl: target.dataUrl, name: target.name },
+      }))
+      setViewingId(target.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.")
     } finally {
@@ -106,15 +129,31 @@ export default function Page() {
     }
   }
 
-  const showResult = result !== null
+  // Analyzed artifacts in upload order — used to navigate between result pages.
+  const analyzedItems = useMemo(
+    () =>
+      artifacts
+        .filter((a) => results[a.id])
+        .map((a) => ({ id: a.id, ...results[a.id] })),
+    [artifacts, results],
+  )
+  const viewing = viewingId ? results[viewingId] : null
+  const showResult = viewing != null
 
   return (
     <div className="min-h-screen bg-white">
       <Header tokenSet={!!token} onManageToken={() => setTokenModalOpen(true)} />
 
-      {showResult ? (
+      {showResult && viewingId ? (
         <main>
-          <ResultView result={result} imageUrl={resultImage} onBack={() => setResult(null)} />
+          <ResultView
+            result={viewing.result}
+            imageUrl={viewing.imageUrl}
+            items={analyzedItems}
+            currentId={viewingId}
+            onNavigate={setViewingId}
+            onBack={() => setViewingId(null)}
+          />
         </main>
       ) : (
         <>
@@ -160,6 +199,8 @@ export default function Page() {
             hasArtifact={!!activeArtifact}
             activeLensCount={activeSkills.length}
             analyzing={analyzing}
+            suggestionCount={suggestionCount}
+            onSuggestionCountChange={setSuggestionCount}
             onAnalyze={handleAnalyze}
           />
         </>

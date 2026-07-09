@@ -6,6 +6,16 @@ import { DEFAULT_SKILLS, type SavedContext, type Skill } from "./types"
 const CONTEXTS_KEY = "design-signal:contexts"
 const CUSTOM_SKILLS_KEY = "design-signal:custom-skills"
 const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
+const SUGGESTION_COUNT_KEY = "design-signal:suggestion-count"
+
+export const MIN_SUGGESTIONS = 1
+export const MAX_SUGGESTIONS = 7
+export const DEFAULT_SUGGESTIONS = 3
+
+function clampCount(n: number) {
+  if (!Number.isFinite(n)) return DEFAULT_SUGGESTIONS
+  return Math.min(MAX_SUGGESTIONS, Math.max(MIN_SUGGESTIONS, Math.round(n)))
+}
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
@@ -46,6 +56,25 @@ export function useDraftContext() {
   }, [text, hydrated])
 
   return [text, setText] as const
+}
+
+/* How many suggestions to request per analysis, persisted (default 3, 1-7). */
+export function useSuggestionCount() {
+  const [count, setCountState] = useState(DEFAULT_SUGGESTIONS)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setCountState(clampCount(readJSON<number>(SUGGESTION_COUNT_KEY, DEFAULT_SUGGESTIONS)))
+    setHydrated(true)
+  }, [])
+
+  const setCount = useCallback((n: number) => setCountState(clampCount(n)), [])
+
+  useEffect(() => {
+    if (hydrated) writeJSON(SUGGESTION_COUNT_KEY, count)
+  }, [count, hydrated])
+
+  return [count, setCount] as const
 }
 
 /* Saved project contexts persisted in localStorage. */

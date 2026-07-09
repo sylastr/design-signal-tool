@@ -1,12 +1,22 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import type { AnalysisResult, Tier } from "@/lib/types"
+
+interface AnalyzedItem {
+  id: string
+  result: AnalysisResult
+  imageUrl: string
+  name: string
+}
 
 interface Props {
   result: AnalysisResult
   imageUrl: string
+  items: AnalyzedItem[]
+  currentId: string
+  onNavigate: (id: string) => void
   onBack: () => void
 }
 
@@ -16,16 +26,33 @@ const TIER_META: Record<Tier, { label: string; color: string; ring: string }> = 
   "nice-to-have": { label: "Nice-to-have", color: "var(--gray-3)", ring: "var(--gray-3)" },
 }
 
-const BOX_THRESHOLD = 0.08
+// Minimum region size so hovering a point marker still reveals a visible
+// highlight box around the section it points to.
+const MIN_BOX = 0.08
 
-export function ResultView({ result, imageUrl, onBack }: Props) {
+export function ResultView({ result, imageUrl, items, currentId, onNavigate, onBack }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
+  const [hovered, setHovered] = useState<number | null>(null)
   const cardRefs = useRef<Record<number, HTMLLIElement | null>>({})
+
+  // The annotation whose region should be revealed: hover takes priority.
+  const active = hovered ?? selected
+
+  // Reset transient state when switching between analyzed artifacts.
+  useEffect(() => {
+    setSelected(null)
+    setHovered(null)
+  }, [currentId])
 
   useEffect(() => {
     if (selected == null) return
     cardRefs.current[selected]?.scrollIntoView({ behavior: "smooth", block: "center" })
   }, [selected])
+
+  const currentIndex = items.findIndex((it) => it.id === currentId)
+  const hasNav = items.length > 1
+  const prev = currentIndex > 0 ? items[currentIndex - 1] : null
+  const next = currentIndex < items.length - 1 ? items[currentIndex + 1] : null
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
@@ -53,6 +80,38 @@ export function ResultView({ result, imageUrl, onBack }: Props) {
         </ul>
       </div>
 
+      {/* Artifact navigation between analyzed images */}
+      {hasNav && (
+        <div className="mt-5 flex items-center justify-between border border-gray-2 bg-gray-1 px-3 py-2">
+          <button
+            type="button"
+            onClick={() => prev && onNavigate(prev.id)}
+            disabled={!prev}
+            className="inline-flex items-center gap-1 text-sm font-medium text-graphite transition-colors hover:text-tr-orange disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+            Prev
+          </button>
+          <div className="flex min-w-0 flex-col items-center px-2 text-center">
+            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-gray-4">
+              Image {currentIndex + 1} of {items.length}
+            </span>
+            <span className="max-w-[220px] truncate text-xs text-graphite" title={items[currentIndex]?.name}>
+              {items[currentIndex]?.name}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => next && onNavigate(next.id)}
+            disabled={!next}
+            className="inline-flex items-center gap-1 text-sm font-medium text-graphite transition-colors hover:text-tr-orange disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      )}
+
       {/* Artifact summary */}
       <p className="mt-5 border-l-2 border-tr-orange pl-3 text-[15px] leading-relaxed text-graphite">
         {result.artifact_summary}
@@ -68,26 +127,30 @@ export function ResultView({ result, imageUrl, onBack }: Props) {
             <div className="pointer-events-none absolute inset-0">
               {result.annotations.map((a) => {
                 const meta = TIER_META[a.tier]
-                const isSel = selected === a.number
-                const showBox = a.location.w > BOX_THRESHOLD || a.location.h > BOX_THRESHOLD
+                const isActive = active === a.number
+                // Enforce a minimum visible region so point markers still get a box.
+                const boxW = Math.max(a.location.w, MIN_BOX)
+                const boxH = Math.max(a.location.h, MIN_BOX)
                 return (
                   <div key={a.number}>
-                    {showBox && (
+                    {/* Region box appears only for the hovered/selected marker */}
+                    {isActive && (
                       <div
-                        className="absolute border-2 border-dashed"
+                        className="absolute border-2 border-dashed transition-opacity"
                         style={{
-                          left: `${(a.location.x - a.location.w / 2) * 100}%`,
-                          top: `${(a.location.y - a.location.h / 2) * 100}%`,
-                          width: `${a.location.w * 100}%`,
-                          height: `${a.location.h * 100}%`,
+                          left: `${(a.location.x - boxW / 2) * 100}%`,
+                          top: `${(a.location.y - boxH / 2) * 100}%`,
+                          width: `${boxW * 100}%`,
+                          height: `${boxH * 100}%`,
                           borderColor: meta.color,
-                          opacity: isSel ? 1 : 0.7,
                         }}
                       />
                     )}
                     <button
                       type="button"
                       onClick={() => setSelected(a.number)}
+                      onMouseEnter={() => setHovered(a.number)}
+                      onMouseLeave={() => setHovered(null)}
                       aria-label={`Annotation ${a.number}: ${meta.label}`}
                       className="pointer-events-auto absolute flex items-center justify-center rounded-full font-bold text-white transition-transform"
                       style={{
@@ -95,11 +158,11 @@ export function ResultView({ result, imageUrl, onBack }: Props) {
                         top: `${a.location.y * 100}%`,
                         width: "28px",
                         height: "28px",
-                        transform: `translate(-50%, -50%) scale(${isSel ? 1.25 : 1})`,
+                        transform: `translate(-50%, -50%) scale(${isActive ? 1.25 : 1})`,
                         backgroundColor: meta.color,
-                        boxShadow: isSel ? "0 0 0 3px #fff, 0 0 0 5px " + meta.color : "0 0 0 2px #fff",
+                        boxShadow: isActive ? "0 0 0 3px #fff, 0 0 0 5px " + meta.color : "0 0 0 2px #fff",
                         fontSize: "13px",
-                        zIndex: isSel ? 2 : 1,
+                        zIndex: isActive ? 2 : 1,
                       }}
                     >
                       {a.number}
@@ -115,18 +178,19 @@ export function ResultView({ result, imageUrl, onBack }: Props) {
         <ul className="flex flex-col gap-3">
           {result.annotations.map((a) => {
             const meta = TIER_META[a.tier]
-            const isSel = selected === a.number
+            const isActive = active === a.number
             return (
               <li
                 key={a.number}
                 ref={(el) => {
                   cardRefs.current[a.number] = el
                 }}
-                onMouseEnter={() => setSelected(a.number)}
+                onMouseEnter={() => setHovered(a.number)}
+                onMouseLeave={() => setHovered(null)}
                 onClick={() => setSelected(a.number)}
                 className="cursor-pointer border border-gray-2 bg-white p-4 transition-shadow"
                 style={
-                  isSel
+                  isActive
                     ? { boxShadow: `0 0 0 2px ${meta.ring}`, borderColor: "transparent" }
                     : undefined
                 }
