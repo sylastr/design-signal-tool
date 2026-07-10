@@ -282,7 +282,7 @@ export function ArtifactIntake({
           id="artifact-heading"
           className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
         >
-          Design Artifact
+          Design Artifacts
         </h2>
         <InfoTooltip label="About artifacts">
           Upload the design you want reviewed — a screen, flow, or mockup as PNG, JPG, or PDF. Clear,
