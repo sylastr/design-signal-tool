@@ -1,6 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react"
 import { Clipboard, Loader2, Sparkles, Upload, X } from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
@@ -9,13 +16,14 @@ import { InfoTooltip } from "@/components/session/info-tooltip"
 
 interface Props {
   artifacts: Artifact[]
-  activeId: string | null
+  // Ids currently selected for analysis (one or many).
+  selectedIds: string[]
   // Ids of artifacts that have a completed AI analysis, used to badge thumbnails.
   analyzedIds: string[]
   // Number of recommendations (annotations) per artifact id.
   recommendationCounts: Record<string, number>
   onAdd: (artifacts: Artifact[]) => void
-  onSelect: (id: string) => void
+  onSelectionChange: (ids: string[]) => void
   onRemove: (id: string) => void
 }
 
@@ -44,11 +52,11 @@ async function readFiles(files: FileList | File[]): Promise<Artifact[]> {
 
 export function ArtifactIntake({
   artifacts,
-  activeId,
+  selectedIds,
   analyzedIds,
   recommendationCounts,
   onAdd,
-  onSelect,
+  onSelectionChange,
   onRemove,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -122,7 +130,67 @@ export function ArtifactIntake({
     }
   }, [handleFiles])
 
-  const active = artifacts.find((a) => a.id === activeId) ?? null
+  // --- Multi-select interactions ---------------------------------------
+  // anchor: index used as the fixed end of a shift/drag range selection.
+  const anchorRef = useRef<number | null>(null)
+  // pointerActive: a plain press is in progress (drag-to-select).
+  const pointerActiveRef = useRef(false)
+  // didDrag: the press moved across thumbnails, so swallow the trailing click.
+  const didDragRef = useRef(false)
+
+  const rangeIds = useCallback(
+    (a: number, b: number) => {
+      const [lo, hi] = a < b ? [a, b] : [b, a]
+      return artifacts.slice(lo, hi + 1).map((x) => x.id)
+    },
+    [artifacts],
+  )
+
+  const handleThumbClick = (e: ReactMouseEvent, id: string, index: number) => {
+    // A drag already set the selection; ignore the click it produces.
+    if (didDragRef.current) {
+      didDragRef.current = false
+      return
+    }
+    if (e.shiftKey && anchorRef.current != null) {
+      // Range from the anchor to the clicked thumbnail.
+      onSelectionChange(rangeIds(anchorRef.current, index))
+    } else if (e.metaKey || e.ctrlKey) {
+      // Toggle this thumbnail in/out of the selection.
+      const set = new Set(selectedIds)
+      if (set.has(id)) set.delete(id)
+      else set.add(id)
+      onSelectionChange(artifacts.filter((a) => set.has(a.id)).map((a) => a.id))
+      anchorRef.current = index
+    } else {
+      onSelectionChange([id])
+      anchorRef.current = index
+    }
+  }
+
+  const handlePointerDown = (e: ReactPointerEvent, id: string, index: number) => {
+    // Reset before every press so a stale drag flag can't swallow a real click.
+    didDragRef.current = false
+    // Modifier clicks are handled on click; only plain presses start a drag.
+    if (e.shiftKey || e.metaKey || e.ctrlKey || e.button !== 0) return
+    pointerActiveRef.current = true
+    anchorRef.current = index
+    onSelectionChange([id])
+  }
+
+  const handlePointerEnter = (index: number) => {
+    if (!pointerActiveRef.current || anchorRef.current == null) return
+    didDragRef.current = true
+    onSelectionChange(rangeIds(anchorRef.current, index))
+  }
+
+  useEffect(() => {
+    const end = () => {
+      pointerActiveRef.current = false
+    }
+    window.addEventListener("pointerup", end)
+    return () => window.removeEventListener("pointerup", end)
+  }, [])
 
   return (
     <section aria-labelledby="artifact-heading" className="flex flex-col gap-4">
@@ -222,20 +290,23 @@ export function ArtifactIntake({
 
       {/* Thumbnail strip */}
       {artifacts.length > 0 && (
-        <ul className="flex flex-wrap gap-3">
-          {artifacts.map((a) => {
-            const isActive = a.id === activeId
+        <div className="flex flex-col gap-2">
+          <ul className="flex select-none flex-wrap gap-3">
+          {artifacts.map((a, index) => {
+            const isSelected = selectedIds.includes(a.id)
             const isAnalyzed = analyzedIds.includes(a.id)
             const recCount = recommendationCounts[a.id] ?? 0
             return (
               <li key={a.id} className="group relative">
                 <button
                   type="button"
-                  onClick={() => onSelect(a.id)}
-                  aria-pressed={isActive}
+                  onClick={(e) => handleThumbClick(e, a.id, index)}
+                  onPointerDown={(e) => handlePointerDown(e, a.id, index)}
+                  onPointerEnter={() => handlePointerEnter(index)}
+                  aria-pressed={isSelected}
                   aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
                   className={`block h-20 w-28 overflow-hidden bg-gray-1 ${
-                    isActive
+                    isSelected
                       ? "border-2 border-tr-orange"
                       : "border border-gray-2 hover:border-gray-3"
                   }`}
@@ -278,7 +349,13 @@ export function ArtifactIntake({
               </li>
             )
           })}
-        </ul>
+          </ul>
+          {artifacts.length > 1 && (
+            <p className="text-[11px] text-gray-3">
+              Shift-click, Cmd/Ctrl-click, or click and drag across thumbnails to select multiple.
+            </p>
+          )}
+        </div>
       )}
     </section>
   )

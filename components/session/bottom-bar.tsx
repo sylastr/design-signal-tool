@@ -4,7 +4,7 @@ import { Loader2, Minus, Plus, Sparkles } from "lucide-react"
 import { MAX_SUGGESTIONS, MIN_SUGGESTIONS } from "@/lib/storage"
 
 interface Props {
-  hasArtifact: boolean
+  selectedCount: number
   activeSkillCount: number
   analyzing: boolean
   suggestionCount: number
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function BottomBar({
-  hasArtifact,
+  selectedCount,
   activeSkillCount,
   analyzing,
   suggestionCount,
@@ -26,13 +26,18 @@ export function BottomBar({
   activeHasResult,
   onViewResults,
 }: Props) {
-  const status = hasArtifact
-    ? `1 artifact selected · ${activeSkillCount} ${activeSkillCount === 1 ? "skill" : "skills"} active`
-    : "No artifact selected"
+  const status =
+    selectedCount > 0
+      ? `${selectedCount} ${selectedCount === 1 ? "artifact" : "artifacts"} selected · ${activeSkillCount} ${activeSkillCount === 1 ? "skill" : "skills"} active`
+      : "No artifact selected"
 
-  const disabled = !hasArtifact || analyzing
+  const disabled = selectedCount === 0 || analyzing
   const canDecrement = suggestionCount > MIN_SUGGESTIONS
   const canIncrement = suggestionCount < MAX_SUGGESTIONS
+
+  // Show the count in the CTA when analyzing more than one artifact.
+  const countSuffix = selectedCount > 1 ? ` (${selectedCount})` : ""
+  const analyzeLabel = activeHasResult ? `Re-analyze${countSuffix}` : `Analyze design${countSuffix}`
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-2 bg-white">
@@ -97,7 +102,7 @@ export function BottomBar({
             ) : (
               <Sparkles className="h-4 w-4" aria-hidden />
             )}
-            {analyzing ? "Analyzing…" : activeHasResult ? "Re-analyze" : "Analyze design"}
+            {analyzing ? "Analyzing…" : analyzeLabel}
           </button>
         </div>
       </div>
