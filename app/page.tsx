@@ -57,14 +57,6 @@ export default function Page() {
     setSelectedIds((prev) => (prev.length ? prev : next[0] ? [next[0].id] : []))
   }
 
-  // Rename an artifact everywhere it's referenced (list + cached result).
-  const handleRename = (id: string, name: string) => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    setArtifacts((prev) => prev.map((a) => (a.id === id ? { ...a, name: trimmed } : a)))
-    setResults((prev) => (prev[id] ? { ...prev, [id]: { ...prev[id], name: trimmed } } : prev))
-  }
-
   // Clear every uploaded artifact along with its selection and cached results.
   const handleRemoveAll = () => {
     setArtifacts([])
@@ -264,7 +256,7 @@ export default function Page() {
                 onSelectionChange={setSelectedIds}
                 onRemove={handleRemove}
                 onRemoveAll={handleRemoveAll}
-                onRename={handleRename}
+                onViewAnalysis={setViewingId}
                 onAnalyze={handleAnalyzeIds}
               />
               <div className="flex flex-col gap-10">
