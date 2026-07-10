@@ -12,6 +12,8 @@ interface Props {
   activeId: string | null
   // Ids of artifacts that have a completed AI analysis, used to badge thumbnails.
   analyzedIds: string[]
+  // Number of recommendations (annotations) per artifact id.
+  recommendationCounts: Record<string, number>
   onAdd: (artifacts: Artifact[]) => void
   onSelect: (id: string) => void
   onRemove: (id: string) => void
@@ -44,6 +46,7 @@ export function ArtifactIntake({
   artifacts,
   activeId,
   analyzedIds,
+  recommendationCounts,
   onAdd,
   onSelect,
   onRemove,
@@ -223,6 +226,7 @@ export function ArtifactIntake({
           {artifacts.map((a) => {
             const isActive = a.id === activeId
             const isAnalyzed = analyzedIds.includes(a.id)
+            const recCount = recommendationCounts[a.id] ?? 0
             return (
               <li key={a.id} className="group relative">
                 <button
@@ -244,6 +248,15 @@ export function ArtifactIntake({
                     className="h-full w-full object-cover"
                   />
                 </button>
+                {isAnalyzed && recCount > 0 && (
+                  <span
+                    title={`${recCount} ${recCount === 1 ? "recommendation" : "recommendations"}`}
+                    className="pointer-events-none absolute -left-2 -top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
+                  >
+                    {recCount}
+                    <span className="sr-only"> recommendations</span>
+                  </span>
+                )}
                 {isAnalyzed && (
                   <span
                     aria-hidden

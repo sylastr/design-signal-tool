@@ -227,6 +227,9 @@ export default function Page() {
                   artifacts={artifacts}
                   activeId={activeId}
                   analyzedIds={analyzedItems.map((a) => a.id)}
+                  recommendationCounts={Object.fromEntries(
+                    analyzedItems.map((a) => [a.id, a.result.annotations.length]),
+                  )}
                   onAdd={handleAdd}
                   onSelect={setActiveId}
                   onRemove={handleRemove}
