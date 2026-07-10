@@ -7,7 +7,6 @@ import { ContextPanel } from "@/components/session/context-panel"
 import { SkillsPanel } from "@/components/session/skills-panel"
 import { BottomBar } from "@/components/session/bottom-bar"
 import { ResultView } from "@/components/result/result-view"
-import { OpenArenaTokenModal } from "@/components/open-arena-token-modal"
 import { useDraftContext, useSavedContexts, useSkills, useSuggestionCount } from "@/lib/storage"
 import type { AnalysisResult, Artifact } from "@/lib/types"
 
@@ -29,10 +28,6 @@ export default function Page() {
   // Remembers the last analysis viewed so we can return to it from the session.
   const [lastViewedId, setLastViewedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Open Arena API token — kept in memory only for this session, never persisted.
-  const [token, setToken] = useState("")
-  const [tokenModalOpen, setTokenModalOpen] = useState(false)
-  const [pendingAnalyze, setPendingAnalyze] = useState(false)
 
   const [contextText, setContextText] = useDraftContext()
   const [suggestionCount, setSuggestionCount] = useSuggestionCount()
@@ -79,7 +74,7 @@ export default function Page() {
   }
 
   // Analyze one or more artifacts sequentially, caching each result as it lands.
-  const runAnalysis = async (authToken: string, targets: Artifact[]) => {
+  const runAnalysis = async (targets: Artifact[]) => {
     if (!targets.length) return
     setAnalyzing(true)
     setError(null)
@@ -93,18 +88,11 @@ export default function Page() {
             imageBase64: target.dataUrl,
             context: contextText,
             activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
-            token: authToken,
             count: suggestionCount,
           }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
-          // Token was missing/invalid — clear it and re-prompt.
-          if (res.status === 401) {
-            setToken("")
-            setPendingAnalyze(true)
-            setTokenModalOpen(true)
-          }
           throw new Error(data.error || "Analysis failed.")
         }
         const data: AnalysisResult = await res.json()
@@ -126,10 +114,7 @@ export default function Page() {
 
   const handleAnalyze = () => {
     if (!selectedArtifacts.length) return
-    // Analysis runs against the AI Gateway by default; a token is only needed
-    // if the deployment is configured to route through Open Arena, in which case
-    // the API responds 401 and we prompt for one.
-    void runAnalysis(token, selectedArtifacts)
+    void runAnalysis(selectedArtifacts)
   }
 
   // Analyze a specific set of artifacts (e.g. from a card's context menu),
@@ -138,15 +123,7 @@ export default function Page() {
     const targets = artifacts.filter((a) => ids.includes(a.id))
     if (!targets.length) return
     setSelectedIds(ids)
-    void runAnalysis(token, targets)
-  }
-
-  const handleSaveToken = (next: string) => {
-    setToken(next)
-    if (pendingAnalyze) {
-      setPendingAnalyze(false)
-      void runAnalysis(next, selectedArtifacts)
-    }
+    void runAnalysis(targets)
   }
 
   // Analyzed artifacts in upload order — used to navigate between result pages.
@@ -226,7 +203,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header tokenSet={!!token} onManageToken={() => setTokenModalOpen(true)} />
+      <Header />
 
       {showResult && viewingId ? (
         <main>
@@ -302,16 +279,6 @@ export default function Page() {
           />
         </>
       )}
-
-      <OpenArenaTokenModal
-        open={tokenModalOpen}
-        onOpenChange={(next) => {
-          setTokenModalOpen(next)
-          if (!next) setPendingAnalyze(false)
-        }}
-        onSave={handleSaveToken}
-        initialValue={token}
-      />
     </div>
   )
 }
