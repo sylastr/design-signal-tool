@@ -48,6 +48,20 @@ export default function Page() {
 
   const activeSkills = useMemo(() => skills.filter((s) => s.active), [skills])
 
+  // The context sent to analysis: every saved entry (labeled by name) plus any
+  // unsaved text still in the editor. Saving clears the box, so saved entries
+  // are the durable source of context and the box is just an input for adding
+  // the next one.
+  const composedContext = useMemo(() => {
+    const parts: string[] = []
+    for (const c of contexts) {
+      if (c.text.trim()) parts.push(`## ${c.name}\n${c.text.trim()}`)
+    }
+    const draft = contextText.trim()
+    if (draft) parts.push(draft)
+    return parts.join("\n\n")
+  }, [contexts, contextText])
+
   const handleAdd = (next: Artifact[]) => {
     setArtifacts((prev) => [...prev, ...next])
   }
@@ -84,7 +98,7 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             imageBase64: target.dataUrl,
-            context: contextText,
+            context: composedContext,
             activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
             count: suggestionCount,
           }),
@@ -181,7 +195,9 @@ export default function Page() {
   }
 
   // Step gating — strictly forward. Each gate must be satisfied to advance.
-  const contextReady = contextText.trim().length >= MIN_CONTEXT
+  // Context is ready once there's at least one saved entry, or enough unsaved
+  // text in the editor to stand on its own.
+  const contextReady = contexts.length > 0 || contextText.trim().length >= MIN_CONTEXT
   const gates = [artifacts.length > 0, contextReady, activeSkills.length > 0 && artifacts.length > 0]
   const canAdvance = gates[step]
 
@@ -192,14 +208,22 @@ export default function Page() {
         : "Add at least one design image to continue"
     }
     if (step === 1) {
-      return contextReady
-        ? "Context looks good — you can continue"
-        : "Describe the project and its users to continue (a sentence or two)"
+      if (!contextReady) {
+        return "Describe the project and its users to continue (a sentence or two)"
+      }
+      const saved = contexts.length
+      if (saved > 0) {
+        const unsaved = contextText.trim().length > 0
+        return `${saved} context ${saved === 1 ? "entry" : "entries"} added${
+          unsaved ? " (plus unsaved text in the box)" : ""
+        } — you can continue`
+      }
+      return "Context looks good — you can continue"
     }
     return activeSkills.length > 0
       ? `${activeSkills.length} ${activeSkills.length === 1 ? "skill" : "skills"} selected`
       : "Pick at least one analysis skill to continue"
-  }, [step, artifacts.length, contextReady, activeSkills.length])
+  }, [step, artifacts.length, contextReady, contexts.length, contextText, activeSkills.length])
 
   const goNext = () => {
     if (canAdvance) setStep((s) => Math.min(s + 1, STEPS.length - 1))
