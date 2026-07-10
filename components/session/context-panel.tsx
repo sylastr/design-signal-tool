@@ -37,6 +37,8 @@ export function ContextPanel({
     if (!trimmed || !contextText.trim()) return
     onSave(trimmed, contextText)
     setName("")
+    // Clear the editor so the user can immediately start a fresh context entry.
+    onContextChange("")
   }
 
   // Extract text from an uploaded file and append it to the current context.
