@@ -57,6 +57,14 @@ export default function Page() {
     setSelectedIds((prev) => (prev.length ? prev : next[0] ? [next[0].id] : []))
   }
 
+  // Clear every uploaded artifact along with its selection and cached results.
+  const handleRemoveAll = () => {
+    setArtifacts([])
+    setSelectedIds([])
+    setResults({})
+    setViewingId(null)
+  }
+
   const handleRemove = (id: string) => {
     setArtifacts((prev) => prev.filter((a) => a.id !== id))
     setSelectedIds((prev) => prev.filter((x) => x !== id))
@@ -122,6 +130,15 @@ export default function Page() {
     // if the deployment is configured to route through Open Arena, in which case
     // the API responds 401 and we prompt for one.
     void runAnalysis(token, selectedArtifacts)
+  }
+
+  // Analyze a specific set of artifacts (e.g. from a card's context menu),
+  // syncing the selection so the bottom bar reflects what ran.
+  const handleAnalyzeIds = (ids: string[]) => {
+    const targets = artifacts.filter((a) => ids.includes(a.id))
+    if (!targets.length) return
+    setSelectedIds(ids)
+    void runAnalysis(token, targets)
   }
 
   const handleSaveToken = (next: string) => {
@@ -228,18 +245,29 @@ export default function Page() {
         <>
           <main className="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-6">
             <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
+              <ArtifactIntake
+                artifacts={artifacts}
+                selectedIds={selectedIds}
+                analyzedIds={analyzedItems.map((a) => a.id)}
+                recommendationCounts={Object.fromEntries(
+                  analyzedItems.map((a) => [a.id, a.result.annotations.length]),
+                )}
+                onAdd={handleAdd}
+                onSelectionChange={setSelectedIds}
+                onRemove={handleRemove}
+                onRemoveAll={handleRemoveAll}
+                onViewAnalysis={setViewingId}
+                onAnalyze={handleAnalyzeIds}
+              />
               <div className="flex flex-col gap-10">
-                <ArtifactIntake
-                  artifacts={artifacts}
-                  selectedIds={selectedIds}
-                  analyzedIds={analyzedItems.map((a) => a.id)}
-                  recommendationCounts={Object.fromEntries(
-                    analyzedItems.map((a) => [a.id, a.result.annotations.length]),
-                  )}
-                  onAdd={handleAdd}
-                  onSelectionChange={setSelectedIds}
-                  onRemove={handleRemove}
-                      />
+                <ContextPanel
+                  contextText={contextText}
+                  onContextChange={setContextText}
+                  contexts={contexts}
+                  onSave={add}
+                  onUpdate={update}
+                  onRemove={remove}
+                />
                 <SkillsPanel
                   skills={skills}
                   onToggle={toggle}
@@ -247,14 +275,6 @@ export default function Page() {
                   onRemoveCustom={removeCustom}
                 />
               </div>
-              <ContextPanel
-                contextText={contextText}
-                onContextChange={setContextText}
-                contexts={contexts}
-                onSave={add}
-                onUpdate={update}
-                onRemove={remove}
-              />
             </div>
 
             {error && (
