@@ -449,40 +449,35 @@ export function ArtifactIntake({
                       </div>
 
                       {/* Preview area */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleCardClick(e, a.id)}
-                        onDoubleClick={() => setPreviewIndex(index)}
-                        aria-pressed={isSelected}
-                        aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
-                        className="relative m-3 mt-0 block aspect-[4/3] overflow-hidden rounded bg-white"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={a.dataUrl || "/placeholder.svg"}
-                          alt={a.name}
-                          className="h-full w-full object-contain"
-                        />
-                        {isAnalyzed && recCount > 0 && (
-                          <span
-                            title={`${recCount} ${recCount === 1 ? "recommendation" : "recommendations"}`}
-                            className="pointer-events-none absolute right-2 top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
-                          >
-                            {recCount}
-                            <span className="sr-only"> recommendations</span>
-                          </span>
-                        )}
+                      <div className="relative m-3 mt-0">
+                        <button
+                          type="button"
+                          onClick={(e) => handleCardClick(e, a.id)}
+                          onDoubleClick={() => setPreviewIndex(index)}
+                          aria-pressed={isSelected}
+                          aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
+                          className="block aspect-[4/3] w-full overflow-hidden rounded bg-white"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={a.dataUrl || "/placeholder.svg"}
+                            alt={a.name}
+                            className="h-full w-full object-contain"
+                          />
+                        </button>
                         {isAnalyzed && (
-                          <span
-                            aria-hidden
-                            title="Analyzed by AI"
-                            className="absolute bottom-2 left-2 inline-flex items-center gap-0.5 rounded bg-racing-green px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white"
+                          <button
+                            type="button"
+                            onClick={() => onViewAnalysis(a.id)}
+                            title="View analysis"
+                            className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded bg-racing-green px-2 py-1 text-[10px] font-semibold tabular-nums text-white shadow-sm transition-colors hover:bg-racing-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
                           >
-                            <Sparkles className="h-2.5 w-2.5" aria-hidden />
-                            AI
-                          </span>
+                            <Sparkles className="h-3 w-3" aria-hidden />
+                            View Analysis
+                            {recCount > 0 && ` (${recCount})`}
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </div>
                   </li>
                 )
@@ -525,14 +520,19 @@ export function ArtifactIntake({
                         >
                           {a.name}
                         </span>
-                        {isAnalyzed && (
-                          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium tabular-nums text-racing-green">
-                            <Sparkles className="h-3 w-3" aria-hidden />
-                            {recCount > 0 && recCount}
-                            <span className="uppercase tracking-[0.08em]">AI</span>
-                          </span>
-                        )}
                       </button>
+                      {isAnalyzed && (
+                        <button
+                          type="button"
+                          onClick={() => onViewAnalysis(a.id)}
+                          title="View analysis"
+                          className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-1 text-[11px] font-medium tabular-nums text-racing-green transition-colors hover:bg-racing-green/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange"
+                        >
+                          <Sparkles className="h-3 w-3" aria-hidden />
+                          View Analysis
+                          {recCount > 0 && ` (${recCount})`}
+                        </button>
+                      )}
                       {renderMenu(a, index, isAnalyzed)}
                     </div>
                   </li>
