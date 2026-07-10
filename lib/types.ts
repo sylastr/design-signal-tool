@@ -25,14 +25,19 @@ export interface Skill {
   id: string
   name: string
   instructions: string
+  /** Selected for the current analysis run (per-session, chosen in the wizard). */
   active: boolean
   custom?: boolean
+  /** Hidden from the wizard at a platform level via Setup. Distinct from active. */
+  hidden?: boolean
 }
 
 export interface SavedContext {
   id: string
   name: string
   text: string
+  /** Hidden from the wizard at a platform level via Setup. */
+  hidden?: boolean
 }
 
 /* Real, opinionated instruction blocks — these are composed into the system prompt.

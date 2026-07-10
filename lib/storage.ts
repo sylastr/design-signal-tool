@@ -5,6 +5,7 @@ import { DEFAULT_SKILLS, type SavedContext, type Skill } from "./types"
 
 const CONTEXTS_KEY = "design-signal:contexts"
 const CUSTOM_SKILLS_KEY = "design-signal:custom-skills"
+const HIDDEN_SKILLS_KEY = "design-signal:hidden-skills"
 const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
 const SUGGESTION_COUNT_KEY = "design-signal:suggestion-count"
 
@@ -112,22 +113,44 @@ export function useSavedContexts() {
     [contexts, persist],
   )
 
-  return { contexts, add, update, remove }
+  // Platform-level visibility: hidden contexts are kept in storage but excluded
+  // from the wizard and from the composed analysis context.
+  const setHidden = useCallback(
+    (id: string, hidden: boolean) => {
+      persist(contexts.map((c) => (c.id === id ? { ...c, hidden } : c)))
+    },
+    [contexts, persist],
+  )
+
+  return { contexts, add, update, remove, setHidden }
 }
 
-/* Custom analysis skills persisted in localStorage, merged with defaults. */
+/* Custom analysis skills persisted in localStorage, merged with defaults.
+   Platform-level `hidden` state is persisted separately (by id) so it applies
+   to both default and custom skills. */
 export function useSkills() {
   const [skills, setSkills] = useState<Skill[]>(DEFAULT_SKILLS)
 
   useEffect(() => {
     const custom = readJSON<Skill[]>(CUSTOM_SKILLS_KEY, [])
-    setSkills([...DEFAULT_SKILLS, ...custom])
+    const hidden = readJSON<string[]>(HIDDEN_SKILLS_KEY, [])
+    const hiddenSet = new Set(hidden)
+    setSkills(
+      [...DEFAULT_SKILLS, ...custom].map((s) => ({ ...s, hidden: hiddenSet.has(s.id) })),
+    )
   }, [])
 
   const persistCustom = useCallback((all: Skill[]) => {
     writeJSON(
       CUSTOM_SKILLS_KEY,
       all.filter((s) => s.custom),
+    )
+  }, [])
+
+  const persistHidden = useCallback((all: Skill[]) => {
+    writeJSON(
+      HIDDEN_SKILLS_KEY,
+      all.filter((s) => s.hidden).map((s) => s.id),
     )
   }, [])
 
@@ -151,10 +174,12 @@ export function useSkills() {
     [persistCustom],
   )
 
-  const removeCustom = useCallback(
-    (id: string) => {
+  const updateCustom = useCallback(
+    (id: string, name: string, instructions: string) => {
       setSkills((prev) => {
-        const next = prev.filter((s) => s.id !== id)
+        const next = prev.map((s) =>
+          s.id === id && s.custom ? { ...s, name, instructions } : s,
+        )
         persistCustom(next)
         return next
       })
@@ -162,5 +187,29 @@ export function useSkills() {
     [persistCustom],
   )
 
-  return { skills, toggle, addCustom, removeCustom }
+  const removeCustom = useCallback(
+    (id: string) => {
+      setSkills((prev) => {
+        const next = prev.filter((s) => s.id !== id)
+        persistCustom(next)
+        persistHidden(next)
+        return next
+      })
+    },
+    [persistCustom, persistHidden],
+  )
+
+  // Platform-level visibility toggle, applies to default and custom skills.
+  const setHidden = useCallback(
+    (id: string, hidden: boolean) => {
+      setSkills((prev) => {
+        const next = prev.map((s) => (s.id === id ? { ...s, hidden } : s))
+        persistHidden(next)
+        return next
+      })
+    },
+    [persistHidden],
+  )
+
+  return { skills, toggle, addCustom, updateCustom, removeCustom, setHidden }
 }
