@@ -72,18 +72,26 @@ export function ContextPanel({
 
   return (
     <section aria-labelledby="context-heading" className="flex flex-col gap-4">
-      <h2
-        id="context-heading"
-        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
-      >
-        Project &amp; product context
-      </h2>
+      <div className="flex flex-col gap-1">
+        <h2
+          id="context-heading"
+          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
+        >
+          Project &amp; product context
+        </h2>
+        <p id="context-help" className="text-xs leading-relaxed text-gray-3">
+          Add target users, design goals, brand guidelines, or known constraints. The more relevant
+          context you provide, the more tailored the analysis.
+        </p>
+      </div>
 
       <textarea
         value={contextText}
         onChange={(e) => onContextChange(e.target.value)}
         rows={6}
-        placeholder="Paste background, target users, prior research, known constraints..."
+        aria-label="Project and product context"
+        aria-describedby="context-help"
+        placeholder="e.g. Target users are legal researchers; goal is to reduce time-to-first-result; must follow TR brand guidelines..."
         className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
       />
 
