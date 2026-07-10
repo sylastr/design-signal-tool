@@ -214,7 +214,7 @@ export function ArtifactIntake({
             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
           >
             <Sparkles className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
-            Analyze this
+            {isAnalyzed ? "Re-analyze this" : "Analyze this"}
           </button>
           {isAnalyzed && (
             <button
