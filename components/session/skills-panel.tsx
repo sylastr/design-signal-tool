@@ -30,7 +30,7 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
         id="skills-heading"
         className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
       >
-        Analysis lenses
+        Analysis skills
       </h2>
 
       <div className="flex flex-wrap gap-2">
@@ -53,7 +53,7 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
               <button
                 type="button"
                 onClick={() => onRemoveCustom(s.id)}
-                aria-label={`Delete lens ${s.name}`}
+                aria-label={`Delete skill ${s.name}`}
                 className={`absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center ${
                   s.active ? "text-white/80 hover:text-white" : "text-gray-3 hover:text-tr-red"
                 }`}
@@ -71,7 +71,7 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
             className="inline-flex items-center gap-1 border border-dashed border-gray-3 bg-white px-3 py-1.5 text-sm font-medium text-gray-4 transition-colors hover:border-tr-orange hover:text-tr-orange"
           >
             <Plus className="h-4 w-4" aria-hidden />
-            Custom lens
+            Custom skill
           </button>
         )}
       </div>
@@ -82,16 +82,16 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Lens name"
-            aria-label="Custom lens name"
+            placeholder="Skill name"
+            aria-label="Custom skill name"
             className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
           />
           <textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             rows={4}
-            placeholder="Instructions — what should this lens look for? Be specific, cite principles."
-            aria-label="Custom lens instructions"
+            placeholder="Instructions — what should this skill look for? Be specific, cite principles."
+            aria-label="Custom skill instructions"
             className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
           />
           <div className="flex gap-2">
@@ -112,7 +112,7 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
               disabled={!name.trim() || !instructions.trim()}
               className="border border-racing-green bg-racing-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-racing-green-light disabled:cursor-not-allowed disabled:border-gray-2 disabled:bg-gray-2 disabled:text-gray-3"
             >
-              Add lens
+              Add skill
             </button>
           </div>
         </div>

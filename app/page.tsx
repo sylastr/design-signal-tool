@@ -259,7 +259,7 @@ export default function Page() {
 
           <BottomBar
             hasArtifact={!!activeArtifact}
-            activeLensCount={activeSkills.length}
+            activeSkillCount={activeSkills.length}
             analyzing={analyzing}
             suggestionCount={suggestionCount}
             onSuggestionCountChange={setSuggestionCount}

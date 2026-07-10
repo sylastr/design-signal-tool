@@ -5,7 +5,7 @@ import { SuppressResizeObserverError } from "@/components/suppress-resize-observ
 export const metadata: Metadata = {
   title: "Design Signal — design review, on the spot",
   description:
-    "Instant, principle-grounded design feedback for live meetings. Upload an artifact, pick your analysis lenses, and get tiered, location-anchored critique.",
+    "Instant, principle-grounded design feedback for live meetings. Upload an artifact, pick your analysis skills, and get tiered, location-anchored critique.",
 }
 
 export const viewport: Viewport = {

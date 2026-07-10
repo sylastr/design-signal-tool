@@ -27,7 +27,7 @@ const annotationSchema = z.object({
   tier: z
     .enum(["must-fix", "should-consider", "nice-to-have"])
     .describe("Severity tier ranked by impact."),
-  skill: z.string().describe("The name of the analysis lens this observation comes from."),
+  skill: z.string().describe("The name of the analysis skill this observation comes from."),
   observation: z.string().describe("What you observe, stated precisely. 1-3 sentences."),
   rationale: z.string().describe("The named principle or supplied context that grounds the observation."),
   suggested_action: z.string().describe("A concrete, actionable next step."),
@@ -89,12 +89,12 @@ export async function POST(req: Request) {
     )
   }
 
-  const lensBlocks =
+  const skillBlocks =
     activeSkills.length > 0
       ? activeSkills
-          .map((s, i) => `LENS ${i + 1} — ${s.name}:\n${s.instructions}`)
+          .map((s, i) => `SKILL ${i + 1} — ${s.name}:\n${s.instructions}`)
           .join("\n\n")
-      : "No specific lenses were selected; apply general principal-level design judgment."
+      : "No specific skills were selected; apply general principal-level design judgment."
 
   const contextBlock = context?.trim()
     ? `PROJECT & PRODUCT CONTEXT (authoritative — ground your feedback in this):\n${context.trim()}`
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
 
   const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.`
 
-  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS LENSES ===\n${lensBlocks}\n\n=== ${contextBlock}\n\n${countBlock}`
+  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS SKILLS ===\n${skillBlocks}\n\n=== ${contextBlock}\n\n${countBlock}`
 
   // Normalize to a data URL the model can consume as an image part.
   const dataUrl = imageBase64.startsWith("data:")

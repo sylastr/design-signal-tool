@@ -5,7 +5,7 @@ import { MAX_SUGGESTIONS, MIN_SUGGESTIONS } from "@/lib/storage"
 
 interface Props {
   hasArtifact: boolean
-  activeLensCount: number
+  activeSkillCount: number
   analyzing: boolean
   suggestionCount: number
   onSuggestionCountChange: (n: number) => void
@@ -17,7 +17,7 @@ interface Props {
 
 export function BottomBar({
   hasArtifact,
-  activeLensCount,
+  activeSkillCount,
   analyzing,
   suggestionCount,
   onSuggestionCountChange,
@@ -27,7 +27,7 @@ export function BottomBar({
   onViewResults,
 }: Props) {
   const status = hasArtifact
-    ? `1 artifact selected · ${activeLensCount} ${activeLensCount === 1 ? "lens" : "lenses"} active`
+    ? `1 artifact selected · ${activeSkillCount} ${activeSkillCount === 1 ? "skill" : "skills"} active`
     : "No artifact selected"
 
   const disabled = !hasArtifact || analyzing
