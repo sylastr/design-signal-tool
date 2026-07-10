@@ -5,6 +5,7 @@ import { Clipboard, Loader2, Upload, X } from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
 import { isImage, isPdf, pdfToImages } from "@/lib/file-extract"
+import { InfoTooltip } from "@/components/session/info-tooltip"
 
 interface Props {
   artifacts: Artifact[]
@@ -119,12 +120,18 @@ export function ArtifactIntake({
 
   return (
     <section aria-labelledby="artifact-heading" className="flex flex-col gap-4">
-      <h2
-        id="artifact-heading"
-        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
-      >
-        Artifact
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2
+          id="artifact-heading"
+          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
+        >
+          Artifact
+        </h2>
+        <InfoTooltip label="About artifacts">
+          Upload the design you want reviewed — a screen, flow, or mockup as PNG, JPG, or PDF. Clear,
+          full-resolution exports produce the most accurate annotations.
+        </InfoTooltip>
+      </div>
 
       {/* Drop zone */}
       <div

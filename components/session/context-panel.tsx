@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 import { Eye, Loader2, Pencil, Trash2, Upload } from "lucide-react"
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
+import { InfoTooltip } from "@/components/session/info-tooltip"
 
 interface Props {
   contextText: string
@@ -72,17 +73,17 @@ export function ContextPanel({
 
   return (
     <section aria-labelledby="context-heading" className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
         <h2
           id="context-heading"
           className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
         >
           Project &amp; product context
         </h2>
-        <p id="context-help" className="text-xs leading-relaxed text-gray-3">
+        <InfoTooltip label="About project context">
           Add target users, design goals, brand guidelines, or known constraints. The more relevant
           context you provide, the more tailored the analysis.
-        </p>
+        </InfoTooltip>
       </div>
 
       <textarea
@@ -90,7 +91,6 @@ export function ContextPanel({
         onChange={(e) => onContextChange(e.target.value)}
         rows={6}
         aria-label="Project and product context"
-        aria-describedby="context-help"
         placeholder="e.g. Target users are legal researchers; goal is to reduce time-to-first-result; must follow TR brand guidelines..."
         className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
       />
