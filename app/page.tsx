@@ -57,6 +57,14 @@ export default function Page() {
     setSelectedIds((prev) => (prev.length ? prev : next[0] ? [next[0].id] : []))
   }
 
+  // Rename an artifact everywhere it's referenced (list + cached result).
+  const handleRename = (id: string, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setArtifacts((prev) => prev.map((a) => (a.id === id ? { ...a, name: trimmed } : a)))
+    setResults((prev) => (prev[id] ? { ...prev, [id]: { ...prev[id], name: trimmed } } : prev))
+  }
+
   const handleRemove = (id: string) => {
     setArtifacts((prev) => prev.filter((a) => a.id !== id))
     setSelectedIds((prev) => prev.filter((x) => x !== id))
@@ -122,6 +130,15 @@ export default function Page() {
     // if the deployment is configured to route through Open Arena, in which case
     // the API responds 401 and we prompt for one.
     void runAnalysis(token, selectedArtifacts)
+  }
+
+  // Analyze a specific set of artifacts (e.g. from a card's context menu),
+  // syncing the selection so the bottom bar reflects what ran.
+  const handleAnalyzeIds = (ids: string[]) => {
+    const targets = artifacts.filter((a) => ids.includes(a.id))
+    if (!targets.length) return
+    setSelectedIds(ids)
+    void runAnalysis(token, targets)
   }
 
   const handleSaveToken = (next: string) => {
@@ -239,6 +256,8 @@ export default function Page() {
                   onAdd={handleAdd}
                   onSelectionChange={setSelectedIds}
                   onRemove={handleRemove}
+                  onRename={handleRename}
+                  onAnalyze={handleAnalyzeIds}
                       />
                 <SkillsPanel
                   skills={skills}

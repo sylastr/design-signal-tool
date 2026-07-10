@@ -6,25 +6,37 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react"
-import { Clipboard, Loader2, Sparkles, Upload, X } from "lucide-react"
+import {
+  Clipboard,
+  Eye,
+  ImageIcon,
+  Loader2,
+  MoreVertical,
+  Pencil,
+  Sparkles,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
 import { isImage, isPdf, pdfToImages } from "@/lib/file-extract"
 import { InfoTooltip } from "@/components/session/info-tooltip"
+import { ArtifactPreview } from "@/components/session/artifact-preview"
 
 interface Props {
   artifacts: Artifact[]
   // Ids currently selected for analysis (one or many).
   selectedIds: string[]
-  // Ids of artifacts that have a completed AI analysis, used to badge thumbnails.
+  // Ids of artifacts that have a completed AI analysis, used to badge cards.
   analyzedIds: string[]
   // Number of recommendations (annotations) per artifact id.
   recommendationCounts: Record<string, number>
   onAdd: (artifacts: Artifact[]) => void
   onSelectionChange: (ids: string[]) => void
   onRemove: (id: string) => void
+  onRename: (id: string, name: string) => void
+  onAnalyze: (ids: string[]) => void
 }
 
 function readImage(file: File): Promise<string> {
@@ -58,12 +70,21 @@ export function ArtifactIntake({
   onAdd,
   onSelectionChange,
   onRemove,
+  onRename,
+  onAnalyze,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [processing, setProcessing] = useState(false)
-
   const [pasteHint, setPasteHint] = useState<string | null>(null)
+
+  // Which card's context menu is open.
+  const [menuId, setMenuId] = useState<string | null>(null)
+  // Which card is being renamed, plus its working value.
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  // Index of the artifact shown in the full-screen preview (null = closed).
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -130,67 +151,49 @@ export function ArtifactIntake({
     }
   }, [handleFiles])
 
-  // --- Multi-select interactions ---------------------------------------
-  // anchor: index used as the fixed end of a shift/drag range selection.
-  const anchorRef = useRef<number | null>(null)
-  // pointerActive: a plain press is in progress (drag-to-select).
-  const pointerActiveRef = useRef(false)
-  // didDrag: the press moved across thumbnails, so swallow the trailing click.
-  const didDragRef = useRef(false)
-
-  const rangeIds = useCallback(
-    (a: number, b: number) => {
-      const [lo, hi] = a < b ? [a, b] : [b, a]
-      return artifacts.slice(lo, hi + 1).map((x) => x.id)
-    },
-    [artifacts],
-  )
-
-  const handleThumbClick = (e: ReactMouseEvent, id: string, index: number) => {
-    // A drag already set the selection; ignore the click it produces.
-    if (didDragRef.current) {
-      didDragRef.current = false
-      return
+  // Close any open context menu on outside click or Escape.
+  useEffect(() => {
+    if (!menuId) return
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target && target.closest("[data-card-menu]")) return
+      setMenuId(null)
     }
-    if (e.shiftKey && anchorRef.current != null) {
-      // Range from the anchor to the clicked thumbnail.
-      onSelectionChange(rangeIds(anchorRef.current, index))
-    } else if (e.metaKey || e.ctrlKey) {
-      // Toggle this thumbnail in/out of the selection.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuId(null)
+    }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [menuId])
+
+  // Click selects a single card; Cmd/Ctrl-click toggles it in the selection.
+  const handleCardClick = (e: ReactMouseEvent, id: string) => {
+    if (renamingId === id) return
+    if (e.metaKey || e.ctrlKey) {
       const set = new Set(selectedIds)
       if (set.has(id)) set.delete(id)
       else set.add(id)
       onSelectionChange(artifacts.filter((a) => set.has(a.id)).map((a) => a.id))
-      anchorRef.current = index
     } else {
       onSelectionChange([id])
-      anchorRef.current = index
     }
   }
 
-  const handlePointerDown = (e: ReactPointerEvent, id: string, index: number) => {
-    // Reset before every press so a stale drag flag can't swallow a real click.
-    didDragRef.current = false
-    // Modifier clicks are handled on click; only plain presses start a drag.
-    if (e.shiftKey || e.metaKey || e.ctrlKey || e.button !== 0) return
-    pointerActiveRef.current = true
-    anchorRef.current = index
-    onSelectionChange([id])
+  const startRename = (a: Artifact) => {
+    setMenuId(null)
+    setRenamingId(a.id)
+    setRenameValue(a.name)
   }
 
-  const handlePointerEnter = (index: number) => {
-    if (!pointerActiveRef.current || anchorRef.current == null) return
-    didDragRef.current = true
-    onSelectionChange(rangeIds(anchorRef.current, index))
+  const commitRename = () => {
+    if (renamingId) onRename(renamingId, renameValue)
+    setRenamingId(null)
+    setRenameValue("")
   }
-
-  useEffect(() => {
-    const end = () => {
-      pointerActiveRef.current = false
-    }
-    window.addEventListener("pointerup", end)
-    return () => window.removeEventListener("pointerup", end)
-  }, [])
 
   return (
     <section aria-labelledby="artifact-heading" className="flex flex-col gap-4">
@@ -288,74 +291,173 @@ export function ArtifactIntake({
         />
       </div>
 
-      {/* Thumbnail strip */}
+      {/* Card grid */}
       {artifacts.length > 0 && (
         <div className="flex flex-col gap-2">
-          <ul className="flex select-none flex-wrap gap-3">
-          {artifacts.map((a, index) => {
-            const isSelected = selectedIds.includes(a.id)
-            const isAnalyzed = analyzedIds.includes(a.id)
-            const recCount = recommendationCounts[a.id] ?? 0
-            return (
-              <li key={a.id} className="group relative">
-                <button
-                  type="button"
-                  onClick={(e) => handleThumbClick(e, a.id, index)}
-                  onPointerDown={(e) => handlePointerDown(e, a.id, index)}
-                  onPointerEnter={() => handlePointerEnter(index)}
-                  aria-pressed={isSelected}
-                  aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
-                  className={`block h-20 w-28 overflow-hidden bg-gray-1 ${
-                    isSelected
-                      ? "border-2 border-tr-orange"
-                      : "border border-gray-2 hover:border-gray-3"
-                  }`}
-                  style={{ aspectRatio: "28 / 20" }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={a.dataUrl || "/placeholder.svg"}
-                    alt={a.name}
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-                {isAnalyzed && recCount > 0 && (
-                  <span
-                    title={`${recCount} ${recCount === 1 ? "recommendation" : "recommendations"}`}
-                    className="pointer-events-none absolute -left-2 -top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {artifacts.map((a, index) => {
+              const isSelected = selectedIds.includes(a.id)
+              const isAnalyzed = analyzedIds.includes(a.id)
+              const recCount = recommendationCounts[a.id] ?? 0
+              const isRenaming = renamingId === a.id
+              return (
+                <li key={a.id}>
+                  <div
+                    className={`flex flex-col overflow-hidden rounded-lg bg-gray-1 transition-colors ${
+                      isSelected
+                        ? "ring-2 ring-tr-orange"
+                        : "ring-1 ring-gray-2 hover:ring-gray-3"
+                    }`}
                   >
-                    {recCount}
-                    <span className="sr-only"> recommendations</span>
-                  </span>
-                )}
-                {isAnalyzed && (
-                  <span
-                    aria-hidden
-                    title="Analyzed by AI"
-                    className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 bg-racing-green px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white"
-                  >
-                    <Sparkles className="h-2.5 w-2.5" aria-hidden />
-                    AI
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onRemove(a.id)}
-                  aria-label={`Remove ${a.name}`}
-                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center border border-gray-2 bg-white text-graphite opacity-0 transition-opacity hover:border-tr-red hover:text-tr-red group-hover:opacity-100"
-                >
-                  <X className="h-3 w-3" aria-hidden />
-                </button>
-              </li>
-            )
-          })}
+                    {/* Header: file icon, name, overflow menu */}
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <ImageIcon className="h-4 w-4 shrink-0 text-gray-4" aria-hidden />
+                      {isRenaming ? (
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={commitRename}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename()
+                            if (e.key === "Escape") {
+                              setRenamingId(null)
+                              setRenameValue("")
+                            }
+                          }}
+                          aria-label={`Rename ${a.name}`}
+                          className="min-w-0 flex-1 border-b border-tr-orange bg-transparent text-sm font-medium text-graphite outline-none"
+                        />
+                      ) : (
+                        <span
+                          className="min-w-0 flex-1 truncate text-sm font-medium text-graphite"
+                          title={a.name}
+                        >
+                          {a.name}
+                        </span>
+                      )}
+
+                      <div className="relative" data-card-menu>
+                        <button
+                          type="button"
+                          onClick={() => setMenuId((prev) => (prev === a.id ? null : a.id))}
+                          aria-label={`More actions for ${a.name}`}
+                          aria-haspopup="menu"
+                          aria-expanded={menuId === a.id}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-gray-4 transition-colors hover:bg-gray-2 hover:text-graphite"
+                        >
+                          <MoreVertical className="h-4 w-4" aria-hidden />
+                        </button>
+                        {menuId === a.id && (
+                          <div
+                            role="menu"
+                            className="absolute right-0 top-8 z-10 w-40 overflow-hidden rounded-md border border-gray-2 bg-white py-1 shadow-lg"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setMenuId(null)
+                                onAnalyze([a.id])
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
+                            >
+                              <Sparkles className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
+                              Analyze this
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setMenuId(null)
+                                setPreviewIndex(index)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
+                            >
+                              <Eye className="h-3.5 w-3.5 text-gray-4" aria-hidden />
+                              Preview
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => startRename(a)}
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-gray-4" aria-hidden />
+                              Rename
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setMenuId(null)
+                                onRemove(a.id)
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-tr-red hover:bg-gray-1"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Preview area */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleCardClick(e, a.id)}
+                      onDoubleClick={() => setPreviewIndex(index)}
+                      aria-pressed={isSelected}
+                      aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
+                      className="relative m-3 mt-0 block aspect-[4/3] overflow-hidden rounded bg-white"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={a.dataUrl || "/placeholder.svg"}
+                        alt={a.name}
+                        className="h-full w-full object-contain"
+                      />
+                      {isAnalyzed && recCount > 0 && (
+                        <span
+                          title={`${recCount} ${recCount === 1 ? "recommendation" : "recommendations"}`}
+                          className="pointer-events-none absolute left-2 top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
+                        >
+                          {recCount}
+                          <span className="sr-only"> recommendations</span>
+                        </span>
+                      )}
+                      {isAnalyzed && (
+                        <span
+                          aria-hidden
+                          title="Analyzed by AI"
+                          className="absolute bottom-2 left-2 inline-flex items-center gap-0.5 rounded bg-racing-green px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white"
+                        >
+                          <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                          AI
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
-          {artifacts.length > 1 && (
-            <p className="text-[11px] text-gray-3">
-              Shift-click, Cmd/Ctrl-click, or click and drag across thumbnails to select multiple.
-            </p>
-          )}
+          <p className="text-[11px] text-gray-3">
+            Click to select · Cmd/Ctrl-click to select multiple · use the ⋮ menu to analyze, preview,
+            rename, or remove.
+          </p>
         </div>
+      )}
+
+      {/* Full-screen preview */}
+      {previewIndex !== null && artifacts[previewIndex] && (
+        <ArtifactPreview
+          artifacts={artifacts}
+          index={previewIndex}
+          onIndexChange={setPreviewIndex}
+          onClose={() => setPreviewIndex(null)}
+        />
       )}
     </section>
   )
