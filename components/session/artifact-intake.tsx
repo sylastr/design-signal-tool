@@ -216,6 +216,20 @@ export function ArtifactIntake({
             <Sparkles className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
             {isAnalyzed ? "Re-analyze this" : "Analyze this"}
           </button>
+          {selectedIds.length > 1 && selectedIds.includes(a.id) && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuId(null)
+                onAnalyze(selectedIds)
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
+              Analyze selected ({selectedIds.length})
+            </button>
+          )}
           {isAnalyzed && (
             <button
               type="button"
