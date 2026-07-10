@@ -19,7 +19,8 @@ interface CachedResult {
 
 export default function Page() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
+  // Ids selected for analysis. Multiple can be picked via shift-click or drag.
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   // Analysis results cached per artifact id, so navigating between them never
   // triggers a re-analysis.
@@ -38,10 +39,13 @@ export default function Page() {
   const { contexts, add, update, remove } = useSavedContexts()
   const { skills, toggle, addCustom, removeCustom } = useSkills()
 
-  const activeArtifact = useMemo(
-    () => artifacts.find((a) => a.id === activeId) ?? null,
-    [artifacts, activeId],
+  // Artifacts chosen for analysis, kept in upload order for consistent runs.
+  const selectedArtifacts = useMemo(
+    () => artifacts.filter((a) => selectedIds.includes(a.id)),
+    [artifacts, selectedIds],
   )
+  // The primary (last-selected) drives which result opens when viewing.
+  const primaryId = selectedIds[selectedIds.length - 1] ?? null
   const activeSkills = useMemo(() => skills.filter((s) => s.active), [skills])
 
   const handleAdd = (next: Artifact[]) => {
@@ -49,16 +53,13 @@ export default function Page() {
       const merged = [...prev, ...next]
       return merged
     })
-    setActiveId((prev) => prev ?? next[0]?.id ?? null)
+    // Auto-select the first upload only when nothing is selected yet.
+    setSelectedIds((prev) => (prev.length ? prev : next[0] ? [next[0].id] : []))
   }
 
   const handleRemove = (id: string) => {
     setArtifacts((prev) => prev.filter((a) => a.id !== id))
-    setActiveId((prev) => {
-      if (prev !== id) return prev
-      const remaining = artifacts.filter((a) => a.id !== id)
-      return remaining[0]?.id ?? null
-    })
+    setSelectedIds((prev) => prev.filter((x) => x !== id))
     // Drop any cached analysis for the removed artifact.
     setResults((prev) => {
       if (!prev[id]) return prev
@@ -69,40 +70,45 @@ export default function Page() {
     setViewingId((prev) => (prev === id ? null : prev))
   }
 
-  const runAnalysis = async (authToken: string) => {
-    if (!activeArtifact) return
-    const target = activeArtifact
+  // Analyze one or more artifacts sequentially, caching each result as it lands.
+  const runAnalysis = async (authToken: string, targets: Artifact[]) => {
+    if (!targets.length) return
     setAnalyzing(true)
     setError(null)
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: target.dataUrl,
-          context: contextText,
-          activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
-          token: authToken,
-          count: suggestionCount,
-        }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        // Token was missing/invalid — clear it and re-prompt.
-        if (res.status === 401) {
-          setToken("")
-          setPendingAnalyze(true)
-          setTokenModalOpen(true)
+      let firstId: string | null = null
+      for (const target of targets) {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64: target.dataUrl,
+            context: contextText,
+            activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
+            token: authToken,
+            count: suggestionCount,
+          }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          // Token was missing/invalid — clear it and re-prompt.
+          if (res.status === 401) {
+            setToken("")
+            setPendingAnalyze(true)
+            setTokenModalOpen(true)
+          }
+          throw new Error(data.error || "Analysis failed.")
         }
-        throw new Error(data.error || "Analysis failed.")
+        const data: AnalysisResult = await res.json()
+        // Cache the result under this artifact's id.
+        setResults((prev) => ({
+          ...prev,
+          [target.id]: { result: data, imageUrl: target.dataUrl, name: target.name },
+        }))
+        if (!firstId) firstId = target.id
       }
-      const data: AnalysisResult = await res.json()
-      // Cache the result under this artifact's id and view it.
-      setResults((prev) => ({
-        ...prev,
-        [target.id]: { result: data, imageUrl: target.dataUrl, name: target.name },
-      }))
-      setViewingId(target.id)
+      // Open the first freshly-analyzed artifact.
+      if (firstId) setViewingId(firstId)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.")
     } finally {
@@ -111,18 +117,18 @@ export default function Page() {
   }
 
   const handleAnalyze = () => {
-    if (!activeArtifact) return
+    if (!selectedArtifacts.length) return
     // Analysis runs against the AI Gateway by default; a token is only needed
     // if the deployment is configured to route through Open Arena, in which case
     // the API responds 401 and we prompt for one.
-    void runAnalysis(token)
+    void runAnalysis(token, selectedArtifacts)
   }
 
   const handleSaveToken = (next: string) => {
     setToken(next)
     if (pendingAnalyze) {
       setPendingAnalyze(false)
-      void runAnalysis(next)
+      void runAnalysis(next, selectedArtifacts)
     }
   }
 
@@ -194,7 +200,7 @@ export default function Page() {
   // artifact's result, then the most recently viewed, then the first analyzed.
   const handleViewResults = () => {
     const target =
-      (activeId && results[activeId] && activeId) ||
+      (primaryId && results[primaryId] && primaryId) ||
       (lastViewedId && results[lastViewedId] && lastViewedId) ||
       analyzedItems[0]?.id ||
       null
@@ -225,9 +231,13 @@ export default function Page() {
               <div className="flex flex-col gap-10">
                 <ArtifactIntake
                   artifacts={artifacts}
-                  activeId={activeId}
+                  selectedIds={selectedIds}
+                  analyzedIds={analyzedItems.map((a) => a.id)}
+                  recommendationCounts={Object.fromEntries(
+                    analyzedItems.map((a) => [a.id, a.result.annotations.length]),
+                  )}
                   onAdd={handleAdd}
-                  onSelect={setActiveId}
+                  onSelectionChange={setSelectedIds}
                   onRemove={handleRemove}
                       />
                 <SkillsPanel
@@ -258,14 +268,16 @@ export default function Page() {
           </main>
 
           <BottomBar
-            hasArtifact={!!activeArtifact}
-            activeLensCount={activeSkills.length}
+            selectedCount={selectedArtifacts.length}
+            activeSkillCount={activeSkills.length}
             analyzing={analyzing}
             suggestionCount={suggestionCount}
             onSuggestionCountChange={setSuggestionCount}
             onAnalyze={handleAnalyze}
             analyzedCount={analyzedItems.length}
-            activeHasResult={!!(activeId && results[activeId])}
+            activeHasResult={
+              selectedArtifacts.length > 0 && selectedArtifacts.every((a) => results[a.id])
+            }
             onViewResults={handleViewResults}
           />
         </>

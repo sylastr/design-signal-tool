@@ -1,16 +1,29 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Clipboard, Loader2, Upload, X } from "lucide-react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react"
+import { Clipboard, Loader2, Sparkles, Upload, X } from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
 import { isImage, isPdf, pdfToImages } from "@/lib/file-extract"
+import { InfoTooltip } from "@/components/session/info-tooltip"
 
 interface Props {
   artifacts: Artifact[]
-  activeId: string | null
+  // Ids currently selected for analysis (one or many).
+  selectedIds: string[]
+  // Ids of artifacts that have a completed AI analysis, used to badge thumbnails.
+  analyzedIds: string[]
+  // Number of recommendations (annotations) per artifact id.
+  recommendationCounts: Record<string, number>
   onAdd: (artifacts: Artifact[]) => void
-  onSelect: (id: string) => void
+  onSelectionChange: (ids: string[]) => void
   onRemove: (id: string) => void
 }
 
@@ -39,9 +52,11 @@ async function readFiles(files: FileList | File[]): Promise<Artifact[]> {
 
 export function ArtifactIntake({
   artifacts,
-  activeId,
+  selectedIds,
+  analyzedIds,
+  recommendationCounts,
   onAdd,
-  onSelect,
+  onSelectionChange,
   onRemove,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -115,16 +130,95 @@ export function ArtifactIntake({
     }
   }, [handleFiles])
 
-  const active = artifacts.find((a) => a.id === activeId) ?? null
+  // --- Multi-select interactions ---------------------------------------
+  // anchor: index used as the fixed end of a shift/drag range selection.
+  const anchorRef = useRef<number | null>(null)
+  // pointerActive: a plain press is in progress (drag-to-select).
+  const pointerActiveRef = useRef(false)
+  // didDrag: the press moved across thumbnails, so swallow the trailing click.
+  const didDragRef = useRef(false)
+
+  const rangeIds = useCallback(
+    (a: number, b: number) => {
+      const [lo, hi] = a < b ? [a, b] : [b, a]
+      return artifacts.slice(lo, hi + 1).map((x) => x.id)
+    },
+    [artifacts],
+  )
+
+  const handleThumbClick = (e: ReactMouseEvent, id: string, index: number) => {
+    // A drag already set the selection; ignore the click it produces.
+    if (didDragRef.current) {
+      didDragRef.current = false
+      return
+    }
+    if (e.shiftKey && anchorRef.current != null) {
+      // Range from the anchor to the clicked thumbnail.
+      onSelectionChange(rangeIds(anchorRef.current, index))
+    } else if (e.metaKey || e.ctrlKey) {
+      // Toggle this thumbnail in/out of the selection.
+      const set = new Set(selectedIds)
+      if (set.has(id)) set.delete(id)
+      else set.add(id)
+      onSelectionChange(artifacts.filter((a) => set.has(a.id)).map((a) => a.id))
+      anchorRef.current = index
+    } else {
+      onSelectionChange([id])
+      anchorRef.current = index
+    }
+  }
+
+  const handlePointerDown = (e: ReactPointerEvent, id: string, index: number) => {
+    // Reset before every press so a stale drag flag can't swallow a real click.
+    didDragRef.current = false
+    // Modifier clicks are handled on click; only plain presses start a drag.
+    if (e.shiftKey || e.metaKey || e.ctrlKey || e.button !== 0) return
+    pointerActiveRef.current = true
+    anchorRef.current = index
+    onSelectionChange([id])
+  }
+
+  const handlePointerEnter = (index: number) => {
+    if (!pointerActiveRef.current || anchorRef.current == null) return
+    didDragRef.current = true
+    onSelectionChange(rangeIds(anchorRef.current, index))
+  }
+
+  useEffect(() => {
+    const end = () => {
+      pointerActiveRef.current = false
+    }
+    window.addEventListener("pointerup", end)
+    return () => window.removeEventListener("pointerup", end)
+  }, [])
 
   return (
     <section aria-labelledby="artifact-heading" className="flex flex-col gap-4">
-      <h2
-        id="artifact-heading"
-        className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
-      >
-        Artifact
-      </h2>
+      <div className="flex items-center gap-1.5">
+        <h2
+          id="artifact-heading"
+          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
+        >
+          Artifact
+        </h2>
+        <InfoTooltip label="About artifacts">
+          Upload the design you want reviewed — a screen, flow, or mockup as PNG, JPG, or PDF. Clear,
+          full-resolution exports produce the most accurate annotations.
+        </InfoTooltip>
+        {artifacts.length > 0 && (
+          <span className="ml-auto flex items-center gap-2 text-[11px] font-medium tabular-nums text-gray-4">
+            <span>
+              {artifacts.length} {artifacts.length === 1 ? "image" : "images"}
+            </span>
+            {analyzedIds.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-racing-green">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                {analyzedIds.length} analyzed
+              </span>
+            )}
+          </span>
+        )}
+      </div>
 
       {/* Drop zone */}
       <div
@@ -160,17 +254,17 @@ export function ArtifactIntake({
               Click to upload
             </button>
             <p className="text-sm text-gray-4">or drag and drop — PNG, JPG, or PDF</p>
-            <div className="mt-1 flex items-center gap-2">
+            <p className="mt-1 text-[11px] text-gray-3">
               <button
                 type="button"
                 onClick={handleClipboardButton}
-                className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-graphite transition-colors hover:border-tr-orange hover:text-tr-orange"
+                className="inline-flex items-center gap-1 text-gray-4 underline decoration-gray-2 underline-offset-2 transition-colors hover:text-tr-orange hover:decoration-tr-orange"
               >
-                <Clipboard className="h-3.5 w-3.5" aria-hidden />
+                <Clipboard className="h-3 w-3" aria-hidden />
                 Paste image
               </button>
-              <span className="text-[11px] text-gray-3">or press Cmd/Ctrl+V</span>
-            </div>
+              <span className="text-gray-3"> or press Cmd/Ctrl+V</span>
+            </p>
             {pasteHint && (
               <p role="status" className="max-w-xs text-[11px] leading-relaxed text-tr-red">
                 {pasteHint}
@@ -196,18 +290,23 @@ export function ArtifactIntake({
 
       {/* Thumbnail strip */}
       {artifacts.length > 0 && (
-        <ul className="flex flex-wrap gap-3">
-          {artifacts.map((a) => {
-            const isActive = a.id === activeId
+        <div className="flex flex-col gap-2">
+          <ul className="flex select-none flex-wrap gap-3">
+          {artifacts.map((a, index) => {
+            const isSelected = selectedIds.includes(a.id)
+            const isAnalyzed = analyzedIds.includes(a.id)
+            const recCount = recommendationCounts[a.id] ?? 0
             return (
               <li key={a.id} className="group relative">
                 <button
                   type="button"
-                  onClick={() => onSelect(a.id)}
-                  aria-pressed={isActive}
-                  aria-label={`Select artifact ${a.name}`}
+                  onClick={(e) => handleThumbClick(e, a.id, index)}
+                  onPointerDown={(e) => handlePointerDown(e, a.id, index)}
+                  onPointerEnter={() => handlePointerEnter(index)}
+                  aria-pressed={isSelected}
+                  aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
                   className={`block h-20 w-28 overflow-hidden bg-gray-1 ${
-                    isActive
+                    isSelected
                       ? "border-2 border-tr-orange"
                       : "border border-gray-2 hover:border-gray-3"
                   }`}
@@ -220,6 +319,25 @@ export function ArtifactIntake({
                     className="h-full w-full object-cover"
                   />
                 </button>
+                {isAnalyzed && recCount > 0 && (
+                  <span
+                    title={`${recCount} ${recCount === 1 ? "recommendation" : "recommendations"}`}
+                    className="pointer-events-none absolute -left-2 -top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
+                  >
+                    {recCount}
+                    <span className="sr-only"> recommendations</span>
+                  </span>
+                )}
+                {isAnalyzed && (
+                  <span
+                    aria-hidden
+                    title="Analyzed by AI"
+                    className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 bg-racing-green px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white"
+                  >
+                    <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                    AI
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => onRemove(a.id)}
@@ -231,7 +349,13 @@ export function ArtifactIntake({
               </li>
             )
           })}
-        </ul>
+          </ul>
+          {artifacts.length > 1 && (
+            <p className="text-[11px] text-gray-3">
+              Shift-click, Cmd/Ctrl-click, or click and drag across thumbnails to select multiple.
+            </p>
+          )}
+        </div>
       )}
     </section>
   )

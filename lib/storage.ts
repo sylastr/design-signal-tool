@@ -115,7 +115,7 @@ export function useSavedContexts() {
   return { contexts, add, update, remove }
 }
 
-/* Custom analysis lenses persisted in localStorage, merged with defaults. */
+/* Custom analysis skills persisted in localStorage, merged with defaults. */
 export function useSkills() {
   const [skills, setSkills] = useState<Skill[]>(DEFAULT_SKILLS)
 
