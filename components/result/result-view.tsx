@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy } from "lucide-react"
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Maximize2, X } from "lucide-react"
 import type { AnalysisResult, Tier } from "@/lib/types"
 
 interface AnalyzedItem {
@@ -46,6 +46,8 @@ export function ResultView({
 }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
   const [hovered, setHovered] = useState<number | null>(null)
+  // Full-screen preview of the artifact image (no annotations).
+  const [previewOpen, setPreviewOpen] = useState(false)
   // Tiers the user has toggled off; their markers and cards are hidden.
   const [hiddenTiers, setHiddenTiers] = useState<Set<Tier>>(new Set())
   const cardRefs = useRef<Record<number, HTMLLIElement | null>>({})
@@ -109,6 +111,21 @@ export function ResultView({
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
     }
   }, [])
+
+  // Close preview on Escape and lock background scroll while it's open.
+  useEffect(() => {
+    if (!previewOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreviewOpen(false)
+    }
+    document.addEventListener("keydown", onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [previewOpen])
 
   const handleCopy = async (a: AnalysisResult["annotations"][number]) => {
     const text = [
@@ -425,6 +442,16 @@ export function ResultView({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl || "/placeholder.svg"} alt="Analyzed design artifact" className="block w-full" />
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              aria-label="Preview image full screen"
+              title="Preview full screen"
+              className="absolute right-2 top-2 z-10 inline-flex items-center gap-1.5 border border-gray-2 bg-white/90 px-2 py-1 text-[11px] font-medium text-graphite backdrop-blur-sm transition-colors hover:bg-white hover:text-tr-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
+            >
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+              Preview
+            </button>
             <div className="pointer-events-none absolute inset-0">
               {visibleAnnotations.map((a) => {
                 const meta = TIER_META[a.tier]
@@ -605,6 +632,43 @@ export function ResultView({
           })}
         </ul>
       </div>
+
+      {/* Full-screen image preview */}
+      {previewOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview of ${items[currentIndex]?.name ?? "analyzed design"}`}
+          className="fixed inset-0 z-50 flex flex-col bg-graphite/95"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="min-w-0 truncate text-sm font-medium" title={items[currentIndex]?.name}>
+              {items[currentIndex]?.name ?? "Analyzed design"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              aria-label="Close preview"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl || "/placeholder.svg"}
+              alt="Analyzed design artifact, full screen"
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
