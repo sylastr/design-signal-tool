@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Clipboard, Loader2, Upload, X } from "lucide-react"
+import { Clipboard, Loader2, Sparkles, Upload, X } from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
 import { isImage, isPdf, pdfToImages } from "@/lib/file-extract"
@@ -10,6 +10,8 @@ import { InfoTooltip } from "@/components/session/info-tooltip"
 interface Props {
   artifacts: Artifact[]
   activeId: string | null
+  // Ids of artifacts that have a completed AI analysis, used to badge thumbnails.
+  analyzedIds: string[]
   onAdd: (artifacts: Artifact[]) => void
   onSelect: (id: string) => void
   onRemove: (id: string) => void
@@ -41,6 +43,7 @@ async function readFiles(files: FileList | File[]): Promise<Artifact[]> {
 export function ArtifactIntake({
   artifacts,
   activeId,
+  analyzedIds,
   onAdd,
   onSelect,
   onRemove,
@@ -131,6 +134,19 @@ export function ArtifactIntake({
           Upload the design you want reviewed — a screen, flow, or mockup as PNG, JPG, or PDF. Clear,
           full-resolution exports produce the most accurate annotations.
         </InfoTooltip>
+        {artifacts.length > 0 && (
+          <span className="ml-auto flex items-center gap-2 text-[11px] font-medium tabular-nums text-gray-4">
+            <span>
+              {artifacts.length} {artifacts.length === 1 ? "image" : "images"}
+            </span>
+            {analyzedIds.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-racing-green">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                {analyzedIds.length} analyzed
+              </span>
+            )}
+          </span>
+        )}
       </div>
 
       {/* Drop zone */}
@@ -206,13 +222,14 @@ export function ArtifactIntake({
         <ul className="flex flex-wrap gap-3">
           {artifacts.map((a) => {
             const isActive = a.id === activeId
+            const isAnalyzed = analyzedIds.includes(a.id)
             return (
               <li key={a.id} className="group relative">
                 <button
                   type="button"
                   onClick={() => onSelect(a.id)}
                   aria-pressed={isActive}
-                  aria-label={`Select artifact ${a.name}`}
+                  aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
                   className={`block h-20 w-28 overflow-hidden bg-gray-1 ${
                     isActive
                       ? "border-2 border-tr-orange"
@@ -227,6 +244,16 @@ export function ArtifactIntake({
                     className="h-full w-full object-cover"
                   />
                 </button>
+                {isAnalyzed && (
+                  <span
+                    aria-hidden
+                    title="Analyzed by AI"
+                    className="absolute bottom-1 left-1 inline-flex items-center gap-0.5 bg-racing-green px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white"
+                  >
+                    <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                    AI
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => onRemove(a.id)}

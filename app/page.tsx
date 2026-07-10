@@ -226,6 +226,7 @@ export default function Page() {
                 <ArtifactIntake
                   artifacts={artifacts}
                   activeId={activeId}
+                  analyzedIds={analyzedItems.map((a) => a.id)}
                   onAdd={handleAdd}
                   onSelect={setActiveId}
                   onRemove={handleRemove}

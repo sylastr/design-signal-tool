@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, Minus, Plus } from "lucide-react"
+import { Loader2, Minus, Plus, Sparkles } from "lucide-react"
 import { MAX_SUGGESTIONS, MIN_SUGGESTIONS } from "@/lib/storage"
 
 interface Props {
@@ -92,7 +92,11 @@ export function BottomBar({
               disabled ? "cursor-not-allowed bg-gray-3" : "bg-tr-orange hover:brightness-95"
             }`}
           >
-            {analyzing && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+            {analyzing ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
             {analyzing ? "Analyzing…" : activeHasResult ? "Re-analyze" : "Analyze design"}
           </button>
         </div>
