@@ -5,7 +5,8 @@ import { Header } from "@/components/header"
 import { ArtifactIntake } from "@/components/session/artifact-intake"
 import { ContextPanel } from "@/components/session/context-panel"
 import { SkillsPanel } from "@/components/session/skills-panel"
-import { BottomBar } from "@/components/session/bottom-bar"
+import { StepIndicator, type Step } from "@/components/session/step-indicator"
+import { WizardBar } from "@/components/session/wizard-bar"
 import { ResultView } from "@/components/result/result-view"
 import { useDraftContext, useSavedContexts, useSkills, useSuggestionCount } from "@/lib/storage"
 import type { AnalysisResult, Artifact } from "@/lib/types"
@@ -16,16 +17,27 @@ interface CachedResult {
   name: string
 }
 
+// The stepped flow: users cannot analyze until they've supplied an image, then
+// context, then a skill — which keeps critiques specific instead of generic.
+const STEPS: Step[] = [
+  { id: "artifacts", label: "Artifacts", hint: "Add the designs to review" },
+  { id: "context", label: "Context", hint: "Describe the project & users" },
+  { id: "skills", label: "Skill", hint: "Choose your critique lens" },
+]
+
+// Minimum characters of context required to advance. Enough to force a real
+// sentence rather than a stray character.
+const MIN_CONTEXT = 12
+
 export default function Page() {
+  const [step, setStep] = useState(0)
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
-  // Ids selected for analysis. Multiple can be picked via shift-click or drag.
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   // Analysis results cached per artifact id, so navigating between them never
   // triggers a re-analysis.
   const [results, setResults] = useState<Record<string, CachedResult>>({})
   const [viewingId, setViewingId] = useState<string | null>(null)
-  // Remembers the last analysis viewed so we can return to it from the session.
+  // Remembers the last analysis viewed so we can return to it.
   const [lastViewedId, setLastViewedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,35 +46,35 @@ export default function Page() {
   const { contexts, add, update, remove } = useSavedContexts()
   const { skills, toggle, addCustom, removeCustom } = useSkills()
 
-  // Artifacts chosen for analysis, kept in upload order for consistent runs.
-  const selectedArtifacts = useMemo(
-    () => artifacts.filter((a) => selectedIds.includes(a.id)),
-    [artifacts, selectedIds],
-  )
-  // The primary (last-selected) drives which result opens when viewing.
-  const primaryId = selectedIds[selectedIds.length - 1] ?? null
   const activeSkills = useMemo(() => skills.filter((s) => s.active), [skills])
 
+  // The context sent to analysis: every saved entry (labeled by name) plus any
+  // unsaved text still in the editor. Saving clears the box, so saved entries
+  // are the durable source of context and the box is just an input for adding
+  // the next one.
+  const composedContext = useMemo(() => {
+    const parts: string[] = []
+    for (const c of contexts) {
+      if (c.text.trim()) parts.push(`## ${c.name}\n${c.text.trim()}`)
+    }
+    const draft = contextText.trim()
+    if (draft) parts.push(draft)
+    return parts.join("\n\n")
+  }, [contexts, contextText])
+
   const handleAdd = (next: Artifact[]) => {
-    setArtifacts((prev) => {
-      const merged = [...prev, ...next]
-      return merged
-    })
-    // Auto-select the first upload only when nothing is selected yet.
-    setSelectedIds((prev) => (prev.length ? prev : next[0] ? [next[0].id] : []))
+    setArtifacts((prev) => [...prev, ...next])
   }
 
-  // Clear every uploaded artifact along with its selection and cached results.
+  // Clear every uploaded artifact along with its cached results.
   const handleRemoveAll = () => {
     setArtifacts([])
-    setSelectedIds([])
     setResults({})
     setViewingId(null)
   }
 
   const handleRemove = (id: string) => {
     setArtifacts((prev) => prev.filter((a) => a.id !== id))
-    setSelectedIds((prev) => prev.filter((x) => x !== id))
     // Drop any cached analysis for the removed artifact.
     setResults((prev) => {
       if (!prev[id]) return prev
@@ -73,7 +85,7 @@ export default function Page() {
     setViewingId((prev) => (prev === id ? null : prev))
   }
 
-  // Analyze one or more artifacts sequentially, caching each result as it lands.
+  // Analyze the whole batch sequentially, caching each result as it lands.
   const runAnalysis = async (targets: Artifact[]) => {
     if (!targets.length) return
     setAnalyzing(true)
@@ -86,7 +98,7 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             imageBase64: target.dataUrl,
-            context: contextText,
+            context: composedContext,
             activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
             count: suggestionCount,
           }),
@@ -96,14 +108,12 @@ export default function Page() {
           throw new Error(data.error || "Analysis failed.")
         }
         const data: AnalysisResult = await res.json()
-        // Cache the result under this artifact's id.
         setResults((prev) => ({
           ...prev,
           [target.id]: { result: data, imageUrl: target.dataUrl, name: target.name },
         }))
         if (!firstId) firstId = target.id
       }
-      // Open the first freshly-analyzed artifact.
       if (firstId) setViewingId(firstId)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.")
@@ -113,31 +123,18 @@ export default function Page() {
   }
 
   const handleAnalyze = () => {
-    if (!selectedArtifacts.length) return
-    void runAnalysis(selectedArtifacts)
-  }
-
-  // Analyze a specific set of artifacts (e.g. from a card's context menu),
-  // syncing the selection so the bottom bar reflects what ran.
-  const handleAnalyzeIds = (ids: string[]) => {
-    const targets = artifacts.filter((a) => ids.includes(a.id))
-    if (!targets.length) return
-    setSelectedIds(ids)
-    void runAnalysis(targets)
+    if (!artifacts.length || !activeSkills.length) return
+    void runAnalysis(artifacts)
   }
 
   // Analyzed artifacts in upload order — used to navigate between result pages.
   const analyzedItems = useMemo(
-    () =>
-      artifacts
-        .filter((a) => results[a.id])
-        .map((a) => ({ id: a.id, ...results[a.id] })),
+    () => artifacts.filter((a) => results[a.id]).map((a) => ({ id: a.id, ...results[a.id] })),
     [artifacts, results],
   )
   const viewing = viewingId ? results[viewingId] : null
   const showResult = viewing != null
 
-  // Keep a memory of the last result actually viewed.
   useEffect(() => {
     if (viewingId) setLastViewedId(viewingId)
   }, [viewingId])
@@ -190,16 +187,54 @@ export default function Page() {
     })
   }
 
-  // Return to an existing analysis without re-running it: prefer the active
-  // artifact's result, then the most recently viewed, then the first analyzed.
+  // Return to an existing analysis without re-running it.
   const handleViewResults = () => {
     const target =
-      (primaryId && results[primaryId] && primaryId) ||
-      (lastViewedId && results[lastViewedId] && lastViewedId) ||
-      analyzedItems[0]?.id ||
-      null
+      (lastViewedId && results[lastViewedId] && lastViewedId) || analyzedItems[0]?.id || null
     if (target) setViewingId(target)
   }
+
+  // Step gating — strictly forward. Each gate must be satisfied to advance.
+  // Context is ready once there's at least one saved entry, or enough unsaved
+  // text in the editor to stand on its own.
+  const contextReady = contexts.length > 0 || contextText.trim().length >= MIN_CONTEXT
+  const gates = [artifacts.length > 0, contextReady, activeSkills.length > 0 && artifacts.length > 0]
+  const canAdvance = gates[step]
+
+  const gateHint = useMemo(() => {
+    if (step === 0) {
+      return artifacts.length > 0
+        ? `${artifacts.length} ${artifacts.length === 1 ? "image" : "images"} ready to review`
+        : "Add at least one design image to continue"
+    }
+    if (step === 1) {
+      if (!contextReady) {
+        return "Describe the project and its users to continue (a sentence or two)"
+      }
+      const saved = contexts.length
+      if (saved > 0) {
+        const unsaved = contextText.trim().length > 0
+        return `${saved} context ${saved === 1 ? "entry" : "entries"} added${
+          unsaved ? " (plus unsaved text in the box)" : ""
+        } — you can continue`
+      }
+      return "Context looks good — you can continue"
+    }
+    return activeSkills.length > 0
+      ? `${activeSkills.length} ${activeSkills.length === 1 ? "skill" : "skills"} selected`
+      : "Pick at least one analysis skill to continue"
+  }, [step, artifacts.length, contextReady, contexts.length, contextText, activeSkills.length])
+
+  const goNext = () => {
+    if (canAdvance) setStep((s) => Math.min(s + 1, STEPS.length - 1))
+  }
+  const goBack = () => setStep((s) => Math.max(s - 1, 0))
+  // Only allow jumping to an already-reached (<= current) step.
+  const handleStepClick = (i: number) => {
+    if (i <= step) setStep(i)
+  }
+
+  const batchHasResult = artifacts.length > 0 && artifacts.every((a) => results[a.id])
 
   return (
     <div className="min-h-screen bg-white">
@@ -221,38 +256,46 @@ export default function Page() {
       ) : (
         <>
           <main className="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-6">
-            <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
+            <StepIndicator steps={STEPS} current={step} onStepClick={handleStepClick} />
+
+            {/* Step 1 — Artifacts */}
+            {step === 0 && (
               <ArtifactIntake
+                wizard
                 artifacts={artifacts}
-                selectedIds={selectedIds}
-                analyzedIds={analyzedItems.map((a) => a.id)}
-                recommendationCounts={Object.fromEntries(
-                  analyzedItems.map((a) => [a.id, a.result.annotations.length]),
-                )}
+                selectedIds={[]}
+                analyzedIds={[]}
+                recommendationCounts={{}}
                 onAdd={handleAdd}
-                onSelectionChange={setSelectedIds}
+                onSelectionChange={() => {}}
                 onRemove={handleRemove}
                 onRemoveAll={handleRemoveAll}
-                onViewAnalysis={setViewingId}
-                onAnalyze={handleAnalyzeIds}
+                onViewAnalysis={() => {}}
+                onAnalyze={() => {}}
               />
-              <div className="flex flex-col gap-10">
-                <ContextPanel
-                  contextText={contextText}
-                  onContextChange={setContextText}
-                  contexts={contexts}
-                  onSave={add}
-                  onUpdate={update}
-                  onRemove={remove}
-                />
-                <SkillsPanel
-                  skills={skills}
-                  onToggle={toggle}
-                  onAddCustom={addCustom}
-                  onRemoveCustom={removeCustom}
-                />
-              </div>
-            </div>
+            )}
+
+            {/* Step 2 — Context */}
+            {step === 1 && (
+              <ContextPanel
+                contextText={contextText}
+                onContextChange={setContextText}
+                contexts={contexts}
+                onSave={add}
+                onUpdate={update}
+                onRemove={remove}
+              />
+            )}
+
+            {/* Step 3 — Skill */}
+            {step === 2 && (
+              <SkillsPanel
+                skills={skills}
+                onToggle={toggle}
+                onAddCustom={addCustom}
+                onRemoveCustom={removeCustom}
+              />
+            )}
 
             {error && (
               <p
@@ -264,17 +307,19 @@ export default function Page() {
             )}
           </main>
 
-          <BottomBar
-            selectedCount={selectedArtifacts.length}
-            activeSkillCount={activeSkills.length}
+          <WizardBar
+            isFirst={step === 0}
+            isLast={step === STEPS.length - 1}
+            canAdvance={canAdvance}
+            gateHint={gateHint}
             analyzing={analyzing}
             suggestionCount={suggestionCount}
             onSuggestionCountChange={setSuggestionCount}
+            onBack={goBack}
+            onNext={goNext}
             onAnalyze={handleAnalyze}
             analyzedCount={analyzedItems.length}
-            activeHasResult={
-              selectedArtifacts.length > 0 && selectedArtifacts.every((a) => results[a.id])
-            }
+            batchHasResult={batchHasResult}
             onViewResults={handleViewResults}
           />
         </>

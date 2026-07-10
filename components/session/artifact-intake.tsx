@@ -41,6 +41,10 @@ interface Props {
   onRemoveAll: () => void
   onViewAnalysis: (id: string) => void
   onAnalyze: (ids: string[]) => void
+  // When true, hides per-artifact selection and inline analysis actions. Used
+  // by the stepped flow, where the whole uploaded set is the batch and
+  // analysis is gated behind the wizard's dedicated steps.
+  wizard?: boolean
 }
 
 function readImage(file: File): Promise<string> {
@@ -77,6 +81,7 @@ export function ArtifactIntake({
   onRemoveAll,
   onViewAnalysis,
   onAnalyze,
+  wizard = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -175,7 +180,12 @@ export function ArtifactIntake({
   }, [menuId])
 
   // Click selects a single card; Cmd/Ctrl-click toggles it in the selection.
-  const handleCardClick = (e: ReactMouseEvent, id: string) => {
+  // In wizard mode selection is disabled, so a click opens the preview instead.
+  const handleCardClick = (e: ReactMouseEvent, id: string, index: number) => {
+    if (wizard) {
+      setPreviewIndex(index)
+      return
+    }
     if (e.metaKey || e.ctrlKey) {
       const set = new Set(selectedIds)
       if (set.has(id)) set.delete(id)
@@ -204,19 +214,21 @@ export function ArtifactIntake({
           role="menu"
           className="absolute right-0 top-8 z-10 w-44 overflow-hidden rounded-md border border-gray-2 bg-white py-1 shadow-lg"
         >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setMenuId(null)
-              onAnalyze([a.id])
-            }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
-            {isAnalyzed ? "Re-analyze this" : "Analyze this"}
-          </button>
-          {selectedIds.length > 1 && selectedIds.includes(a.id) && (
+          {!wizard && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuId(null)
+                onAnalyze([a.id])
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-graphite hover:bg-gray-1"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-tr-orange" aria-hidden />
+              {isAnalyzed ? "Re-analyze this" : "Analyze this"}
+            </button>
+          )}
+          {!wizard && selectedIds.length > 1 && selectedIds.includes(a.id) && (
             <button
               type="button"
               role="menuitem"
@@ -230,7 +242,7 @@ export function ArtifactIntake({
               Analyze selected ({selectedIds.length})
             </button>
           )}
-          {isAnalyzed && (
+          {!wizard && isAnalyzed && (
             <button
               type="button"
               role="menuitem"
@@ -377,18 +389,22 @@ export function ArtifactIntake({
           <div className="flex items-center gap-3 text-[11px] font-medium">
             {artifacts.length > 1 && (
               <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSelectionChange(allSelected ? [] : artifacts.map((a) => a.id))
-                  }
-                  className="text-graphite underline decoration-gray-3 underline-offset-2 transition-colors hover:decoration-tr-orange"
-                >
-                  {allSelected ? "Deselect all" : "Select all"}
-                </button>
-                <span aria-hidden className="text-gray-2">
-                  |
-                </span>
+                {!wizard && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSelectionChange(allSelected ? [] : artifacts.map((a) => a.id))
+                      }
+                      className="text-graphite underline decoration-gray-3 underline-offset-2 transition-colors hover:decoration-tr-orange"
+                    >
+                      {allSelected ? "Deselect all" : "Select all"}
+                    </button>
+                    <span aria-hidden className="text-gray-2">
+                      |
+                    </span>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={onRemoveAll}
@@ -466,10 +482,14 @@ export function ArtifactIntake({
                       <div className="relative m-3 mt-0">
                         <button
                           type="button"
-                          onClick={(e) => handleCardClick(e, a.id)}
+                          onClick={(e) => handleCardClick(e, a.id, index)}
                           onDoubleClick={() => setPreviewIndex(index)}
-                          aria-pressed={isSelected}
-                          aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
+                          aria-pressed={wizard ? undefined : isSelected}
+                          aria-label={
+                            wizard
+                              ? `Preview artifact ${a.name}`
+                              : `Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`
+                          }
                           className="block aspect-[4/3] w-full overflow-hidden rounded bg-white"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -514,10 +534,14 @@ export function ArtifactIntake({
                     >
                       <button
                         type="button"
-                        onClick={(e) => handleCardClick(e, a.id)}
+                        onClick={(e) => handleCardClick(e, a.id, index)}
                         onDoubleClick={() => setPreviewIndex(index)}
-                        aria-pressed={isSelected}
-                        aria-label={`Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`}
+                        aria-pressed={wizard ? undefined : isSelected}
+                        aria-label={
+                          wizard
+                            ? `Preview artifact ${a.name}`
+                            : `Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`
+                        }
                         className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       >
                         <span className="relative block h-10 w-14 shrink-0 overflow-hidden rounded bg-white ring-1 ring-gray-2">
@@ -556,8 +580,9 @@ export function ArtifactIntake({
           )}
 
           <p className="text-[11px] text-gray-3">
-            Click to select · Cmd/Ctrl-click to select multiple · use the ⋮ menu to analyze, view,
-            preview, or remove.
+            {wizard
+              ? "Every image you add here is analyzed together with the same context and skill. Click an image to preview it, or use the ⋮ menu to remove."
+              : "Click to select · Cmd/Ctrl-click to select multiple · use the ⋮ menu to analyze, view, preview, or remove."}
           </p>
         </div>
       )}
