@@ -160,17 +160,17 @@ export function ArtifactIntake({
               Click to upload
             </button>
             <p className="text-sm text-gray-4">or drag and drop — PNG, JPG, or PDF</p>
-            <div className="mt-1 flex items-center gap-2">
+            <p className="mt-1 text-[11px] text-gray-3">
               <button
                 type="button"
                 onClick={handleClipboardButton}
-                className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-graphite transition-colors hover:border-tr-orange hover:text-tr-orange"
+                className="inline-flex items-center gap-1 text-gray-4 underline decoration-gray-2 underline-offset-2 transition-colors hover:text-tr-orange hover:decoration-tr-orange"
               >
-                <Clipboard className="h-3.5 w-3.5" aria-hidden />
+                <Clipboard className="h-3 w-3" aria-hidden />
                 Paste image
               </button>
-              <span className="text-[11px] text-gray-3">or press Cmd/Ctrl+V</span>
-            </div>
+              <span className="text-gray-3"> or press Cmd/Ctrl+V</span>
+            </p>
             {pasteHint && (
               <p role="status" className="max-w-xs text-[11px] leading-relaxed text-tr-red">
                 {pasteHint}
