@@ -31,7 +31,11 @@ const annotationSchema = z.object({
     .describe("Severity tier ranked by impact."),
   skill: z.string().describe("The name of the analysis skill this observation comes from."),
   observation: z.string().describe("What you observe, stated precisely. 1-3 sentences."),
-  rationale: z.string().describe("The named principle or supplied context that grounds the observation."),
+  rationale: z
+    .string()
+    .describe(
+      "What grounds this observation. Prefer citing the specific project/product context point it traces to (quote or paraphrase it); otherwise name the design principle. Never a bare opinion.",
+    ),
   suggested_action: z.string().describe("A concrete, actionable next step."),
 })
 
@@ -54,7 +58,16 @@ function clamp01(value: number, fallback: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-const BASE_ROLE = `You are acting as an extension of a Principal Designer, reviewing a teammate's design in real time during a working session. Your feedback will be read in the moment — be precise, opinionated where warranted, and never generic. Ground every observation in a named principle or the supplied project context — never a bare opinion. Anchor each item to a specific location in the artifact. Tier each item must-fix / should-consider / nice-to-have. Keep each item to 1-3 sentences. If context is insufficient to judge something, say so explicitly rather than guessing. Rank items by impact, surfacing the highest-impact issues first.
+const BASE_ROLE = `You are acting as an extension of a Principal Designer, reviewing a teammate's design in real time during a working session. Your feedback will be read in the moment — be precise, opinionated where warranted, and never generic.
+
+HOW TO PRIORITIZE (in this order):
+1. CONTEXT FIRST. Before anything else, read and internalize the PROJECT & PRODUCT CONTEXT below. It captures real user research, product decisions, and notes from product/engineering calls. Treat it as the primary lens for the entire review: your job is to evaluate whether THIS design serves what the context describes.
+2. MINE THE CONTEXT FOR FINDINGS. Actively surface issues the context implies — places where the design contradicts a stated user need, ignores a decision made on a product/engineering call, misses a research insight, or fails a goal named in the context. These context-grounded findings are the most valuable; rank them highest.
+3. SKILLS SUPPORT, THEY DON'T LEAD. Use the active analysis skills as your toolkit for evaluating the design against the context — not as a separate checklist. A skill-based (heuristic) observation should still be cross-checked against the context, and when a heuristic finding conflicts with the context, the context wins.
+
+For EVERY observation, the "rationale" field must state what grounds it: cite the specific context point it traces back to (quote or paraphrase it) when the finding is context-driven, or name the design principle when it is heuristic. Never give a bare opinion.
+
+Anchor each item to a specific location in the artifact. Tier each item must-fix / should-consider / nice-to-have. Keep each item to 1-3 sentences. Rank items by impact, with context-grounded issues surfacing first.
 
 For each item, provide a normalized location (x, y as the CENTER point, plus w, h for a bounding box, all in the range 0-1 relative to the image). Use a small w/h (around 0.02) when the issue is a single point; use a larger box when the issue spans a region.`
 
@@ -88,12 +101,14 @@ export async function POST(req: Request) {
       : "No specific skills were selected; apply general principal-level design judgment."
 
   const contextBlock = context?.trim()
-    ? `PROJECT & PRODUCT CONTEXT (authoritative — ground your feedback in this):\n${context.trim()}`
-    : "No project context was supplied. Where a judgment depends on context you do not have, say so explicitly rather than guessing."
+    ? `This is the primary lens for the review. Evaluate the design against it first, and mine it for findings (unmet user needs, decisions from product/engineering calls, research insights, stated goals). Ground context-driven observations by citing the relevant point in the "rationale" field.\n\n${context.trim()}`
+    : `No project context was supplied. Open the review by briefly noting that, without research or product/engineering context, this is a heuristics-only pass and some judgments can't be fully grounded. Then still deliver best-effort, skill-based feedback so the review is never empty — never refuse or return fewer items than requested.`
 
   const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.`
 
-  const system = `${BASE_ROLE}\n\n=== ACTIVE ANALYSIS SKILLS ===\n${skillBlocks}\n\n=== ${contextBlock}\n\n${countBlock}`
+  // Order matters: context comes first (primary lens), then the skills that
+  // support evaluating the design against it, then the output-size constraint.
+  const system = `${BASE_ROLE}\n\n=== PROJECT & PRODUCT CONTEXT ===\n${contextBlock}\n\n=== ACTIVE ANALYSIS SKILLS (toolkit for evaluating against the context above) ===\n${skillBlocks}\n\n${countBlock}`
 
   // Normalize to a data URL the model can consume as an image part.
   const dataUrl = imageBase64.startsWith("data:")
@@ -124,7 +139,7 @@ export async function POST(req: Request) {
           content: [
             {
               type: "text",
-              text: `Review this design artifact now. Return your prioritized, tiered, location-anchored critique with EXACTLY ${count} annotation${count === 1 ? "" : "s"}.`,
+              text: `Review this design artifact now, using the project & product context as your primary lens. Return your prioritized, tiered, location-anchored critique with EXACTLY ${count} annotation${count === 1 ? "" : "s"}, leading with the issues most grounded in that context.`,
             },
             { type: "file", data: dataUrl, mediaType: "image/png" },
           ],
