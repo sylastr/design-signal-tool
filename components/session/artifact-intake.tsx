@@ -35,6 +35,7 @@ interface Props {
   onAdd: (artifacts: Artifact[]) => void
   onSelectionChange: (ids: string[]) => void
   onRemove: (id: string) => void
+  onRemoveAll: () => void
   onRename: (id: string, name: string) => void
   onAnalyze: (ids: string[]) => void
 }
@@ -70,6 +71,7 @@ export function ArtifactIntake({
   onAdd,
   onSelectionChange,
   onRemove,
+  onRemoveAll,
   onRename,
   onAnalyze,
 }: Props) {
@@ -294,6 +296,32 @@ export function ArtifactIntake({
       {/* Card grid */}
       {artifacts.length > 0 && (
         <div className="flex flex-col gap-2">
+          {artifacts.length > 1 && (
+            <div className="flex items-center gap-3 text-[11px] font-medium">
+              <button
+                type="button"
+                onClick={() =>
+                  onSelectionChange(
+                    selectedIds.length === artifacts.length ? [] : artifacts.map((a) => a.id),
+                  )
+                }
+                className="text-graphite underline decoration-gray-3 underline-offset-2 transition-colors hover:decoration-tr-orange"
+              >
+                {selectedIds.length === artifacts.length ? "Deselect all" : "Select all"}
+              </button>
+              <span aria-hidden className="text-gray-2">
+                |
+              </span>
+              <button
+                type="button"
+                onClick={onRemoveAll}
+                className="inline-flex items-center gap-1 text-tr-red underline decoration-transparent underline-offset-2 transition-colors hover:decoration-tr-red"
+              >
+                <Trash2 className="h-3 w-3" aria-hidden />
+                Remove all
+              </button>
+            </div>
+          )}
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {artifacts.map((a, index) => {
               const isSelected = selectedIds.includes(a.id)
@@ -421,7 +449,7 @@ export function ArtifactIntake({
                       {isAnalyzed && recCount > 0 && (
                         <span
                           title={`${recCount} ${recCount === 1 ? "recommendation" : "recommendations"}`}
-                          className="pointer-events-none absolute left-2 top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
+                          className="pointer-events-none absolute right-2 top-2 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-white bg-tr-orange px-1 text-[10px] font-semibold leading-none tabular-nums text-white shadow-sm"
                         >
                           {recCount}
                           <span className="sr-only"> recommendations</span>

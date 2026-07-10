@@ -65,6 +65,14 @@ export default function Page() {
     setResults((prev) => (prev[id] ? { ...prev, [id]: { ...prev[id], name: trimmed } } : prev))
   }
 
+  // Clear every uploaded artifact along with its selection and cached results.
+  const handleRemoveAll = () => {
+    setArtifacts([])
+    setSelectedIds([])
+    setResults({})
+    setViewingId(null)
+  }
+
   const handleRemove = (id: string) => {
     setArtifacts((prev) => prev.filter((a) => a.id !== id))
     setSelectedIds((prev) => prev.filter((x) => x !== id))
@@ -245,20 +253,29 @@ export default function Page() {
         <>
           <main className="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-6">
             <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
+              <ArtifactIntake
+                artifacts={artifacts}
+                selectedIds={selectedIds}
+                analyzedIds={analyzedItems.map((a) => a.id)}
+                recommendationCounts={Object.fromEntries(
+                  analyzedItems.map((a) => [a.id, a.result.annotations.length]),
+                )}
+                onAdd={handleAdd}
+                onSelectionChange={setSelectedIds}
+                onRemove={handleRemove}
+                onRemoveAll={handleRemoveAll}
+                onRename={handleRename}
+                onAnalyze={handleAnalyzeIds}
+              />
               <div className="flex flex-col gap-10">
-                <ArtifactIntake
-                  artifacts={artifacts}
-                  selectedIds={selectedIds}
-                  analyzedIds={analyzedItems.map((a) => a.id)}
-                  recommendationCounts={Object.fromEntries(
-                    analyzedItems.map((a) => [a.id, a.result.annotations.length]),
-                  )}
-                  onAdd={handleAdd}
-                  onSelectionChange={setSelectedIds}
-                  onRemove={handleRemove}
-                  onRename={handleRename}
-                  onAnalyze={handleAnalyzeIds}
-                      />
+                <ContextPanel
+                  contextText={contextText}
+                  onContextChange={setContextText}
+                  contexts={contexts}
+                  onSave={add}
+                  onUpdate={update}
+                  onRemove={remove}
+                />
                 <SkillsPanel
                   skills={skills}
                   onToggle={toggle}
@@ -266,14 +283,6 @@ export default function Page() {
                   onRemoveCustom={removeCustom}
                 />
               </div>
-              <ContextPanel
-                contextText={contextText}
-                onContextChange={setContextText}
-                contexts={contexts}
-                onSave={add}
-                onUpdate={update}
-                onRemove={remove}
-              />
             </div>
 
             {error && (
