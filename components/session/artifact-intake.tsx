@@ -1,9 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Clipboard, Upload, X } from "lucide-react"
+import { Clipboard, Loader2, Upload, X } from "lucide-react"
 import type { Artifact } from "@/lib/types"
 import { uid } from "@/lib/storage"
+import { isImage, isPdf, pdfToImages } from "@/lib/file-extract"
 
 interface Props {
   artifacts: Artifact[]
@@ -13,23 +14,27 @@ interface Props {
   onRemove: (id: string) => void
 }
 
-function readFiles(files: FileList | File[]): Promise<Artifact[]> {
-  const images = Array.from(files).filter((f) => f.type.startsWith("image/"))
-  return Promise.all(
-    images.map(
-      (file) =>
-        new Promise<Artifact>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () =>
-            resolve({
-              id: uid(),
-              name: file.name,
-              dataUrl: reader.result as string,
-            })
-          reader.readAsDataURL(file)
-        }),
-    ),
-  )
+function readImage(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.readAsDataURL(file)
+  })
+}
+
+// Turn uploaded files into artifacts. Images map 1:1; PDFs are rendered to one
+// image artifact per page so the annotation overlay keeps working.
+async function readFiles(files: FileList | File[]): Promise<Artifact[]> {
+  const out: Artifact[] = []
+  for (const file of Array.from(files)) {
+    if (isImage(file)) {
+      out.push({ id: uid(), name: file.name, dataUrl: await readImage(file) })
+    } else if (isPdf(file)) {
+      const pages = await pdfToImages(file)
+      for (const p of pages) out.push({ id: uid(), name: p.name, dataUrl: p.dataUrl })
+    }
+  }
+  return out
 }
 
 export function ArtifactIntake({
@@ -41,13 +46,22 @@ export function ArtifactIntake({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+  const [processing, setProcessing] = useState(false)
 
   const [pasteHint, setPasteHint] = useState<string | null>(null)
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      const next = await readFiles(files)
-      if (next.length) onAdd(next)
+      setPasteHint(null)
+      setProcessing(true)
+      try {
+        const next = await readFiles(files)
+        if (next.length) onAdd(next)
+      } catch {
+        setPasteHint("Couldn't read that file. Try a PNG, JPG, or PDF.")
+      } finally {
+        setProcessing(false)
+      }
     },
     [onAdd],
   )
@@ -128,38 +142,46 @@ export function ArtifactIntake({
           dragging ? "border-tr-orange bg-gray-1" : "border-gray-2 bg-white"
         }`}
       >
-        <Upload className="h-6 w-6 text-gray-3" aria-hidden />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="text-sm font-semibold text-graphite underline decoration-gray-3 underline-offset-4 hover:decoration-tr-orange"
-        >
-          Click to upload
-        </button>
-        <p className="text-sm text-gray-4">or drag and drop an image (PNG / JPG)</p>
-        <div className="mt-1 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleClipboardButton}
-            className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-graphite transition-colors hover:border-tr-orange hover:text-tr-orange"
-          >
-            <Clipboard className="h-3.5 w-3.5" aria-hidden />
-            Paste image
-          </button>
-          <span className="text-[11px] text-gray-3">or press Cmd/Ctrl+V</span>
-        </div>
-        {pasteHint && (
-          <p role="status" className="max-w-xs text-[11px] leading-relaxed text-tr-red">
-            {pasteHint}
-          </p>
+        {processing ? (
+          <>
+            <Loader2 className="h-6 w-6 animate-spin text-gray-3" aria-hidden />
+            <p role="status" className="text-sm text-gray-4">
+              Processing file…
+            </p>
+          </>
+        ) : (
+          <>
+            <Upload className="h-6 w-6 text-gray-3" aria-hidden />
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="text-sm font-semibold text-graphite underline decoration-gray-3 underline-offset-4 hover:decoration-tr-orange"
+            >
+              Click to upload
+            </button>
+            <p className="text-sm text-gray-4">or drag and drop — PNG, JPG, or PDF</p>
+            <div className="mt-1 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleClipboardButton}
+                className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-graphite transition-colors hover:border-tr-orange hover:text-tr-orange"
+              >
+                <Clipboard className="h-3.5 w-3.5" aria-hidden />
+                Paste image
+              </button>
+              <span className="text-[11px] text-gray-3">or press Cmd/Ctrl+V</span>
+            </div>
+            {pasteHint && (
+              <p role="status" className="max-w-xs text-[11px] leading-relaxed text-tr-red">
+                {pasteHint}
+              </p>
+            )}
+          </>
         )}
-        <p className="max-w-xs text-[11px] leading-relaxed text-gray-3">
-          Export PDF pages and Figma frames as images before uploading.
-        </p>
         <input
           ref={inputRef}
           type="file"
-          accept="image/png,image/jpeg"
+          accept="image/png,image/jpeg,application/pdf,.pdf"
           multiple
           className="sr-only"
           onChange={(e) => {
