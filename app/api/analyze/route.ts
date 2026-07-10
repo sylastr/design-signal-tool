@@ -11,6 +11,8 @@ export const maxDuration = 60
 // (Claude), which works in the preview and on public deployments.
 const OPEN_ARENA_BASE_URL = process.env.OPEN_ARENA_BASE_URL?.trim()
 const OPEN_ARENA_MODEL = process.env.OPEN_ARENA_MODEL?.trim() || "gpt-4o"
+// Open Arena auth now comes from a server-side env var rather than a user-supplied token.
+const OPEN_ARENA_API_KEY = process.env.OPEN_ARENA_API_KEY?.trim()
 const FALLBACK_MODEL = "anthropic/claude-sonnet-4.5"
 const useOpenArena = Boolean(OPEN_ARENA_BASE_URL)
 
@@ -60,7 +62,6 @@ interface AnalyzeBody {
   imageBase64?: string
   context?: string
   activeSkills?: { name: string; instructions: string }[]
-  token?: string
   count?: number
 }
 
@@ -72,21 +73,11 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request body." }, { status: 400 })
   }
 
-  const { imageBase64, context, activeSkills = [], token } = body
+  const { imageBase64, context, activeSkills = [] } = body
   const count = clampCount(body.count)
 
   if (!imageBase64) {
     return Response.json({ error: "No artifact image provided." }, { status: 400 })
-  }
-
-  const trimmedToken = token?.trim()
-  // A token is only required when routing through Open Arena. The AI Gateway
-  // fallback authenticates via the platform, so no user token is needed there.
-  if (useOpenArena && !trimmedToken) {
-    return Response.json(
-      { error: "Open Arena token required. Add your token to enable AI features." },
-      { status: 401 },
-    )
   }
 
   const skillBlocks =
@@ -116,7 +107,7 @@ export async function POST(req: Request) {
       ? createOpenAICompatible({
           name: "open-arena",
           baseURL: OPEN_ARENA_BASE_URL,
-          apiKey: trimmedToken,
+          apiKey: OPEN_ARENA_API_KEY,
           supportsStructuredOutputs: true,
         })(OPEN_ARENA_MODEL)
       : FALLBACK_MODEL
@@ -159,14 +150,18 @@ export async function POST(req: Request) {
     const message = err instanceof Error ? err.message : String(err)
     console.log("[v0] /api/analyze error:", message)
 
-    // Surface authentication failures distinctly so the UI can re-prompt for a token.
+    // Surface authentication failures distinctly so the UI can show a clear message.
     const status =
       typeof (err as { statusCode?: number })?.statusCode === "number"
         ? (err as { statusCode: number }).statusCode
         : undefined
     if (status === 401 || status === 403 || /unauthorized|forbidden|invalid.*(api key|token)/i.test(message)) {
       return Response.json(
-        { error: "Open Arena rejected the token. Check it and try again.", code: "invalid_token" },
+        {
+          error:
+            "Open Arena rejected the request. Verify the OPEN_ARENA_API_KEY server configuration.",
+          code: "invalid_token",
+        },
         { status: 401 },
       )
     }
