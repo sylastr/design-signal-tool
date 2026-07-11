@@ -14,6 +14,29 @@ const HIDDEN_SKILLS_KEY = "design-signal:hidden-skills"
 const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
 const ANALYSIS_PREFS_KEY = "design-signal:analysis-prefs"
 
+// Every key this app persists. Kept together so a reset wipes everything.
+const ALL_STORAGE_KEYS = [
+  CONTEXTS_KEY,
+  CUSTOM_SKILLS_KEY,
+  HIDDEN_SKILLS_KEY,
+  DRAFT_CONTEXT_KEY,
+  ANALYSIS_PREFS_KEY,
+]
+
+/* Wipe all persisted data (skills, contexts, drafts, analysis prefs) and reload
+   so every hook re-hydrates to its defaults. */
+export function clearAllData() {
+  if (typeof window === "undefined") return
+  try {
+    for (const key of ALL_STORAGE_KEYS) {
+      window.localStorage.removeItem(key)
+    }
+  } catch {
+    /* ignore private mode / access errors */
+  }
+  window.location.reload()
+}
+
 export const MIN_SUGGESTIONS = 1
 export const MAX_SUGGESTIONS = 7
 export const DEFAULT_SUGGESTIONS = 3
