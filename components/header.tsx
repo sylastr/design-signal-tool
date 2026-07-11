@@ -33,7 +33,7 @@ export function Header({ onOpenSetup }: { onOpenSetup?: () => void }) {
             className="inline-flex items-center gap-2 border border-gray-2 bg-white px-3 py-2 text-sm font-medium text-graphite transition-colors hover:border-gray-3 hover:text-tr-orange"
           >
             <Settings className="h-4 w-4" aria-hidden />
-            <span className="hidden sm:inline">Setup</span>
+            <span className="hidden sm:inline">Settings</span>
           </button>
         )}
       </div>
