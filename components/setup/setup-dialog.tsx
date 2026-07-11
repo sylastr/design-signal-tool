@@ -1,18 +1,20 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Layers, ScrollText, X } from "lucide-react"
-import type { SavedContext, Skill } from "@/lib/types"
+import { Layers, ScrollText, SlidersHorizontal, X } from "lucide-react"
+import type { AnalysisPrefs, SavedContext, SectionKey, Skill, Tier } from "@/lib/types"
 import { SetupSkillsPane } from "@/components/setup/setup-skills-pane"
 import { SetupContextsPane } from "@/components/setup/setup-contexts-pane"
+import { SetupAnalysisPane } from "@/components/setup/setup-analysis-pane"
 
-type Tab = "skills" | "contexts"
+type Tab = "skills" | "contexts" | "analysis"
 
 interface Props {
   open: boolean
   onClose: () => void
   skills: Skill[]
   contexts: SavedContext[]
+  analysisPrefs: AnalysisPrefs
   onAddSkill: (name: string, instructions: string) => void
   onUpdateSkill: (id: string, name: string, instructions: string) => void
   onRemoveSkill: (id: string) => void
@@ -21,6 +23,9 @@ interface Props {
   onUpdateContext: (id: string, name: string, text: string) => void
   onRemoveContext: (id: string) => void
   onToggleContextHidden: (id: string, hidden: boolean) => void
+  onToggleTier: (tier: Tier, enabled: boolean) => void
+  onToggleSection: (section: SectionKey, enabled: boolean) => void
+  onMaxSuggestionsChange: (n: number) => void
 }
 
 export function SetupDialog({
@@ -28,6 +33,7 @@ export function SetupDialog({
   onClose,
   skills,
   contexts,
+  analysisPrefs,
   onAddSkill,
   onUpdateSkill,
   onRemoveSkill,
@@ -36,6 +42,9 @@ export function SetupDialog({
   onUpdateContext,
   onRemoveContext,
   onToggleContextHidden,
+  onToggleTier,
+  onToggleSection,
+  onMaxSuggestionsChange,
 }: Props) {
   const [tab, setTab] = useState<Tab>("skills")
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -58,9 +67,10 @@ export function SetupDialog({
 
   if (!open) return null
 
-  const navItems: { id: Tab; label: string; icon: typeof Layers; count: number }[] = [
+  const navItems: { id: Tab; label: string; icon: typeof Layers; count?: number }[] = [
     { id: "skills", label: "Skills", icon: ScrollText, count: skills.length },
     { id: "contexts", label: "Contexts", icon: Layers, count: contexts.length },
+    { id: "analysis", label: "Analysis", icon: SlidersHorizontal },
   ]
 
   return (
@@ -111,7 +121,9 @@ export function SetupDialog({
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />
                   <span className="flex-1">{item.label}</span>
-                  <span className="text-xs text-gray-3">{item.count}</span>
+                  {item.count !== undefined && (
+                    <span className="text-xs text-gray-3">{item.count}</span>
+                  )}
                 </button>
               )
             })}
@@ -132,7 +144,7 @@ export function SetupDialog({
           </div>
 
           <div className="ds-scroll flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-            {tab === "skills" ? (
+            {tab === "skills" && (
               <SetupSkillsPane
                 skills={skills}
                 onAddCustom={onAddSkill}
@@ -140,13 +152,22 @@ export function SetupDialog({
                 onRemoveCustom={onRemoveSkill}
                 onToggleHidden={onToggleSkillHidden}
               />
-            ) : (
+            )}
+            {tab === "contexts" && (
               <SetupContextsPane
                 contexts={contexts}
                 onAdd={onAddContext}
                 onUpdate={onUpdateContext}
                 onRemove={onRemoveContext}
                 onToggleHidden={onToggleContextHidden}
+              />
+            )}
+            {tab === "analysis" && (
+              <SetupAnalysisPane
+                prefs={analysisPrefs}
+                onToggleTier={onToggleTier}
+                onToggleSection={onToggleSection}
+                onMaxSuggestionsChange={onMaxSuggestionsChange}
               />
             )}
           </div>

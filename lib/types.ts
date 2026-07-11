@@ -1,5 +1,36 @@
 export type Tier = "must-fix" | "should-consider" | "nice-to-have"
 
+/** The three text paragraphs that make up a single suggestion card. */
+export type SectionKey = "observation" | "rationale" | "suggested_action"
+
+/** Platform-level analysis preferences configured in Settings → Analysis. */
+export interface AnalysisPrefs {
+  /** Which severity tiers are included in results. */
+  tiers: Record<Tier, boolean>
+  /** Which paragraphs render on each suggestion card. */
+  sections: Record<SectionKey, boolean>
+  /** Max number of suggestions the AI can return (1-7). */
+  maxSuggestions: number
+}
+
+/** Display order + labels for the tier toggles. */
+export const TIER_ORDER: { key: Tier; label: string }[] = [
+  { key: "must-fix", label: "Must-fix" },
+  { key: "should-consider", label: "Should-consider" },
+  { key: "nice-to-have", label: "Nice-to-have" },
+]
+
+/** Display order + labels/descriptions for the paragraph toggles. */
+export const SECTION_ORDER: { key: SectionKey; label: string; description: string }[] = [
+  { key: "observation", label: "Observation", description: "The headline finding — what was observed." },
+  { key: "rationale", label: "Rationale", description: "The reasoning and context grounding the finding." },
+  {
+    key: "suggested_action",
+    label: "Suggested action",
+    description: "The concrete next step to take.",
+  },
+]
+
 export interface Annotation {
   number: number
   location: { x: number; y: number; w: number; h: number } // 0-1 normalized; x,y = center

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Maximize2, X } from "lucide-react"
-import type { AnalysisResult, Tier } from "@/lib/types"
+import type { AnalysisResult, AnalysisPrefs, Tier } from "@/lib/types"
 
 interface AnalyzedItem {
   id: string
@@ -16,6 +16,10 @@ interface Props {
   imageUrl: string
   items: AnalyzedItem[]
   currentId: string
+  /** Platform-level tier visibility from Settings → Analysis. */
+  enabledTiers: AnalysisPrefs["tiers"]
+  /** Platform-level paragraph visibility from Settings → Analysis. */
+  sections: AnalysisPrefs["sections"]
   onNavigate: (id: string) => void
   onBack: () => void
   onMoveAnnotation: (annotationNumber: number, x: number, y: number) => void
@@ -39,6 +43,8 @@ export function ResultView({
   imageUrl,
   items,
   currentId,
+  enabledTiers,
+  sections,
   onNavigate,
   onBack,
   onMoveAnnotation,
@@ -128,14 +134,12 @@ export function ResultView({
   }, [previewOpen])
 
   const handleCopy = async (a: AnalysisResult["annotations"][number]) => {
-    const text = [
-      `[${TIER_META[a.tier].label} · ${a.skill}]`,
-      a.observation,
-      "",
-      a.rationale,
-      "",
-      `Suggested action: ${a.suggested_action}`,
-    ].join("\n")
+    // Copy only the paragraphs currently shown, so the clipboard matches the card.
+    const lines: string[] = [`[${TIER_META[a.tier].label} · ${a.skill}]`]
+    if (sections.observation) lines.push(a.observation)
+    if (sections.rationale) lines.push("", a.rationale)
+    if (sections.suggested_action) lines.push("", `Suggested action: ${a.suggested_action}`)
+    const text = lines.join("\n")
     try {
       await navigator.clipboard.writeText(text)
     } catch {
@@ -337,7 +341,11 @@ export function ResultView({
     })
   }
 
-  const visibleAnnotations = result.annotations.filter((a) => !hiddenTiers.has(a.tier))
+  // A suggestion shows only if its tier is enabled at the platform level (Settings
+  // → Analysis) and not toggled off for this view.
+  const visibleAnnotations = result.annotations.filter(
+    (a) => enabledTiers[a.tier] && !hiddenTiers.has(a.tier),
+  )
 
   useEffect(() => {
     if (selected == null) return
@@ -362,7 +370,7 @@ export function ResultView({
           Back to session
         </button>
         <ul className="flex items-center gap-2">
-          {(Object.keys(TIER_META) as Tier[]).map((t) => {
+          {(Object.keys(TIER_META) as Tier[]).filter((t) => enabledTiers[t]).map((t) => {
             const hidden = hiddenTiers.has(t)
             const count = result.annotations.filter((a) => a.tier === t).length
             return (
@@ -619,12 +627,18 @@ export function ResultView({
                         )}
                       </button>
                     </div>
-                    <p className="text-sm font-bold leading-snug text-graphite">{a.observation}</p>
-                    <p className="mt-1.5 text-sm leading-relaxed text-gray-4">{a.rationale}</p>
-                    <p className="mt-2.5 text-sm font-medium leading-relaxed text-racing-green">
-                      <span aria-hidden>→ </span>
-                      {a.suggested_action}
-                    </p>
+                    {sections.observation && (
+                      <p className="text-sm font-bold leading-snug text-graphite">{a.observation}</p>
+                    )}
+                    {sections.rationale && (
+                      <p className="mt-1.5 text-sm leading-relaxed text-gray-4">{a.rationale}</p>
+                    )}
+                    {sections.suggested_action && (
+                      <p className="mt-2.5 text-sm font-medium leading-relaxed text-racing-green">
+                        <span aria-hidden>→ </span>
+                        {a.suggested_action}
+                      </p>
+                    )}
                   </div>
                 </div>
               </li>

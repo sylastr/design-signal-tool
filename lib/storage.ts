@@ -1,21 +1,34 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { DEFAULT_SKILLS, type SavedContext, type Skill } from "./types"
+import {
+  DEFAULT_SKILLS,
+  type AnalysisPrefs,
+  type SavedContext,
+  type Skill,
+} from "./types"
 
 const CONTEXTS_KEY = "design-signal:contexts"
 const CUSTOM_SKILLS_KEY = "design-signal:custom-skills"
 const HIDDEN_SKILLS_KEY = "design-signal:hidden-skills"
 const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
-const SUGGESTION_COUNT_KEY = "design-signal:suggestion-count"
+const ANALYSIS_PREFS_KEY = "design-signal:analysis-prefs"
 
 export const MIN_SUGGESTIONS = 1
 export const MAX_SUGGESTIONS = 7
-export const DEFAULT_SUGGESTIONS = 3
+export const DEFAULT_SUGGESTIONS = 1
 
 function clampCount(n: number) {
   if (!Number.isFinite(n)) return DEFAULT_SUGGESTIONS
   return Math.min(MAX_SUGGESTIONS, Math.max(MIN_SUGGESTIONS, Math.round(n)))
+}
+
+// All tiers and paragraphs are shown by default, so results are complete until
+// the user deliberately narrows them in Settings → Analysis.
+export const DEFAULT_ANALYSIS_PREFS: AnalysisPrefs = {
+  tiers: { "must-fix": true, "should-consider": true, "nice-to-have": true },
+  sections: { observation: true, rationale: true, suggested_action: true },
+  maxSuggestions: DEFAULT_SUGGESTIONS,
 }
 
 function readJSON<T>(key: string, fallback: T): T {
@@ -59,23 +72,39 @@ export function useDraftContext() {
   return [text, setText] as const
 }
 
-/* How many suggestions to request per analysis, persisted (default 3, 1-7). */
-export function useSuggestionCount() {
-  const [count, setCountState] = useState(DEFAULT_SUGGESTIONS)
+/* Platform-level analysis preferences (tiers, paragraphs, max suggestions),
+   persisted so they apply across sessions. Configured in Settings → Analysis. */
+export function useAnalysisPrefs() {
+  const [prefs, setPrefs] = useState<AnalysisPrefs>(DEFAULT_ANALYSIS_PREFS)
   const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
-    setCountState(clampCount(readJSON<number>(SUGGESTION_COUNT_KEY, DEFAULT_SUGGESTIONS)))
+    const stored = readJSON<Partial<AnalysisPrefs>>(ANALYSIS_PREFS_KEY, {})
+    setPrefs({
+      tiers: { ...DEFAULT_ANALYSIS_PREFS.tiers, ...stored.tiers },
+      sections: { ...DEFAULT_ANALYSIS_PREFS.sections, ...stored.sections },
+      maxSuggestions: clampCount(stored.maxSuggestions ?? DEFAULT_SUGGESTIONS),
+    })
     setHydrated(true)
   }, [])
 
-  const setCount = useCallback((n: number) => setCountState(clampCount(n)), [])
-
   useEffect(() => {
-    if (hydrated) writeJSON(SUGGESTION_COUNT_KEY, count)
-  }, [count, hydrated])
+    if (hydrated) writeJSON(ANALYSIS_PREFS_KEY, prefs)
+  }, [prefs, hydrated])
 
-  return [count, setCount] as const
+  const setTier = useCallback((tier: keyof AnalysisPrefs["tiers"], enabled: boolean) => {
+    setPrefs((p) => ({ ...p, tiers: { ...p.tiers, [tier]: enabled } }))
+  }, [])
+
+  const setSection = useCallback((section: keyof AnalysisPrefs["sections"], enabled: boolean) => {
+    setPrefs((p) => ({ ...p, sections: { ...p.sections, [section]: enabled } }))
+  }, [])
+
+  const setMaxSuggestions = useCallback((n: number) => {
+    setPrefs((p) => ({ ...p, maxSuggestions: clampCount(n) }))
+  }, [])
+
+  return { prefs, setTier, setSection, setMaxSuggestions }
 }
 
 /* Saved project contexts persisted in localStorage. */

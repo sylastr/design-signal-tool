@@ -9,8 +9,8 @@ import { StepIndicator, type Step } from "@/components/session/step-indicator"
 import { WizardBar } from "@/components/session/wizard-bar"
 import { SetupDialog } from "@/components/setup/setup-dialog"
 import { ResultView } from "@/components/result/result-view"
-import { useDraftContext, useSavedContexts, useSkills, useSuggestionCount } from "@/lib/storage"
-import type { AnalysisResult, Artifact } from "@/lib/types"
+import { useAnalysisPrefs, useDraftContext, useSavedContexts, useSkills } from "@/lib/storage"
+import type { AnalysisResult, Artifact, Tier } from "@/lib/types"
 
 interface CachedResult {
   result: AnalysisResult
@@ -45,7 +45,7 @@ export default function Page() {
   const [setupOpen, setSetupOpen] = useState(false)
 
   const [contextText, setContextText] = useDraftContext()
-  const [suggestionCount, setSuggestionCount] = useSuggestionCount()
+  const { prefs, setTier, setSection, setMaxSuggestions } = useAnalysisPrefs()
   const { contexts, add, update, remove, setHidden: setContextHidden } = useSavedContexts()
   const { skills, toggle, addCustom, updateCustom, removeCustom, setHidden: setSkillHidden } =
     useSkills()
@@ -114,7 +114,8 @@ export default function Page() {
             imageBase64: target.dataUrl,
             context: composedContext,
             activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
-            count: suggestionCount,
+            count: prefs.maxSuggestions,
+            allowedTiers: (Object.keys(prefs.tiers) as Tier[]).filter((t) => prefs.tiers[t]),
           }),
         })
         if (!res.ok) {
@@ -259,6 +260,7 @@ export default function Page() {
         onClose={() => setSetupOpen(false)}
         skills={skills}
         contexts={contexts}
+        analysisPrefs={prefs}
         onAddSkill={addCustom}
         onUpdateSkill={updateCustom}
         onRemoveSkill={removeCustom}
@@ -267,6 +269,9 @@ export default function Page() {
         onUpdateContext={update}
         onRemoveContext={remove}
         onToggleContextHidden={setContextHidden}
+        onToggleTier={setTier}
+        onToggleSection={setSection}
+        onMaxSuggestionsChange={setMaxSuggestions}
       />
 
       {showResult && viewingId ? (
@@ -276,6 +281,8 @@ export default function Page() {
             imageUrl={viewing.imageUrl}
             items={analyzedItems}
             currentId={viewingId}
+            enabledTiers={prefs.tiers}
+            sections={prefs.sections}
             onNavigate={setViewingId}
             onBack={() => setViewingId(null)}
             onMoveAnnotation={(num, x, y) => handleMoveAnnotation(viewingId, num, x, y)}
@@ -342,8 +349,8 @@ export default function Page() {
             canAdvance={canAdvance}
             gateHint={gateHint}
             analyzing={analyzing}
-            suggestionCount={suggestionCount}
-            onSuggestionCountChange={setSuggestionCount}
+            suggestionCount={prefs.maxSuggestions}
+            onSuggestionCountChange={setMaxSuggestions}
             onBack={goBack}
             onNext={goNext}
             onAnalyze={handleAnalyze}
