@@ -16,7 +16,7 @@ const ANALYSIS_PREFS_KEY = "design-signal:analysis-prefs"
 
 export const MIN_SUGGESTIONS = 1
 export const MAX_SUGGESTIONS = 7
-export const DEFAULT_SUGGESTIONS = 1
+export const DEFAULT_SUGGESTIONS = 3
 
 function clampCount(n: number) {
   if (!Number.isFinite(n)) return DEFAULT_SUGGESTIONS

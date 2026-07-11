@@ -45,6 +45,50 @@ export function SetupAnalysisPane({
         </p>
       </div>
 
+      {/* Maximum suggestions */}
+      <section aria-labelledby="analysis-max" className="flex flex-col gap-3">
+        <div>
+          <h4
+            id="analysis-max"
+            className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
+          >
+            Maximum suggestions
+          </h4>
+          <p className="mt-1 text-sm text-gray-4">
+            The most recommendations the AI can return per design (1&ndash;{MAX_SUGGESTIONS}).
+          </p>
+        </div>
+        <div className="flex items-center gap-3 border border-gray-2 px-4 py-3">
+          <span className="flex-1 text-sm font-semibold text-graphite">Suggestions per design</span>
+          <div className="flex items-center border border-gray-2">
+            <button
+              type="button"
+              onClick={() => onMaxSuggestionsChange(prefs.maxSuggestions - 1)}
+              disabled={!canDecrement}
+              aria-label="Decrease maximum suggestions"
+              className="flex h-8 w-8 items-center justify-center text-graphite transition-colors hover:bg-gray-1 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <Minus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            <span
+              aria-live="polite"
+              className="flex h-8 w-10 items-center justify-center border-x border-gray-2 text-sm font-semibold tabular-nums text-graphite"
+            >
+              {prefs.maxSuggestions}
+            </span>
+            <button
+              type="button"
+              onClick={() => onMaxSuggestionsChange(prefs.maxSuggestions + 1)}
+              disabled={!canIncrement}
+              aria-label="Increase maximum suggestions"
+              className="flex h-8 w-8 items-center justify-center text-graphite transition-colors hover:bg-gray-1 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Recommendation priority */}
       <section aria-labelledby="analysis-priority" className="flex flex-col gap-3">
         <div>
@@ -123,50 +167,6 @@ export function SetupAnalysisPane({
             )
           })}
         </ul>
-      </section>
-
-      {/* Maximum suggestions */}
-      <section aria-labelledby="analysis-max" className="flex flex-col gap-3">
-        <div>
-          <h4
-            id="analysis-max"
-            className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
-          >
-            Maximum suggestions
-          </h4>
-          <p className="mt-1 text-sm text-gray-4">
-            The most recommendations the AI can return per design (1&ndash;{MAX_SUGGESTIONS}).
-          </p>
-        </div>
-        <div className="flex items-center gap-3 border border-gray-2 px-4 py-3">
-          <span className="flex-1 text-sm font-semibold text-graphite">Suggestions per design</span>
-          <div className="flex items-center border border-gray-2">
-            <button
-              type="button"
-              onClick={() => onMaxSuggestionsChange(prefs.maxSuggestions - 1)}
-              disabled={!canDecrement}
-              aria-label="Decrease maximum suggestions"
-              className="flex h-8 w-8 items-center justify-center text-graphite transition-colors hover:bg-gray-1 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <Minus className="h-3.5 w-3.5" aria-hidden />
-            </button>
-            <span
-              aria-live="polite"
-              className="flex h-8 w-10 items-center justify-center border-x border-gray-2 text-sm font-semibold tabular-nums text-graphite"
-            >
-              {prefs.maxSuggestions}
-            </span>
-            <button
-              type="button"
-              onClick={() => onMaxSuggestionsChange(prefs.maxSuggestions + 1)}
-              disabled={!canIncrement}
-              aria-label="Increase maximum suggestions"
-              className="flex h-8 w-8 items-center justify-center text-graphite transition-colors hover:bg-gray-1 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          </div>
-        </div>
       </section>
     </div>
   )
