@@ -69,6 +69,12 @@ export interface SavedContext {
   text: string
   /** Hidden from the wizard at a platform level via Setup. */
   hidden?: boolean
+  /**
+   * Where the entry is managed. "global" entries are created/edited in
+   * Settings and are read-only in the wizard; "local" entries are created in
+   * the wizard and fully editable there. Missing = global (legacy entries).
+   */
+  scope?: "global" | "local"
 }
 
 /* Real, opinionated instruction blocks — these are composed into the system prompt.

@@ -144,8 +144,8 @@ export function useSavedContexts() {
   }, [])
 
   const add = useCallback(
-    (name: string, text: string) => {
-      const entry: SavedContext = { id: uid(), name, text }
+    (name: string, text: string, scope: "global" | "local" = "global") => {
+      const entry: SavedContext = { id: uid(), name, text, scope }
       persist([entry, ...contexts])
     },
     [contexts, persist],

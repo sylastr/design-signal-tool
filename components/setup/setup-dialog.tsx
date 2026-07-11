@@ -13,6 +13,8 @@ type Tab = "skills" | "contexts" | "analysis" | "reset"
 interface Props {
   open: boolean
   onClose: () => void
+  /** Section to show when the dialog opens. Defaults to "skills". */
+  initialTab?: Tab
   skills: Skill[]
   contexts: SavedContext[]
   analysisPrefs: AnalysisPrefs
@@ -32,6 +34,7 @@ interface Props {
 export function SetupDialog({
   open,
   onClose,
+  initialTab,
   skills,
   contexts,
   analysisPrefs,
@@ -49,6 +52,11 @@ export function SetupDialog({
 }: Props) {
   const [tab, setTab] = useState<Tab>("skills")
   const dialogRef = useRef<HTMLDivElement>(null)
+
+  // Land on the requested section each time the dialog opens.
+  useEffect(() => {
+    if (open) setTab(initialTab ?? "skills")
+  }, [open, initialTab])
 
   // Close on Escape and lock body scroll while open.
   useEffect(() => {

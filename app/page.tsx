@@ -43,6 +43,12 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null)
 
   const [setupOpen, setSetupOpen] = useState(false)
+  const [setupTab, setSetupTab] = useState<"skills" | "contexts" | "analysis" | "reset">("skills")
+
+  const openSetup = (tab: "skills" | "contexts" | "analysis" | "reset" = "skills") => {
+    setSetupTab(tab)
+    setSetupOpen(true)
+  }
 
   const [contextText, setContextText] = useDraftContext()
   const { prefs, setTier, setSection, setMaxSuggestions } = useAnalysisPrefs()
@@ -253,11 +259,12 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header onOpenSetup={() => setSetupOpen(true)} />
+      <Header onOpenSetup={() => openSetup("skills")} />
 
       <SetupDialog
         open={setupOpen}
         onClose={() => setSetupOpen(false)}
+        initialTab={setupTab}
         skills={skills}
         contexts={contexts}
         analysisPrefs={prefs}
@@ -317,9 +324,10 @@ export default function Page() {
                 contextText={contextText}
                 onContextChange={setContextText}
                 contexts={visibleContexts}
-                onSave={add}
+                onSave={(name, text) => add(name, text, "local")}
                 onUpdate={update}
                 onRemove={remove}
+                onManageGlobal={() => openSetup("contexts")}
               />
             )}
 
