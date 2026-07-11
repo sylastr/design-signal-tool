@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Layers, ScrollText, SlidersHorizontal, X } from "lucide-react"
+import { Layers, RotateCcw, ScrollText, SlidersHorizontal, X } from "lucide-react"
 import type { AnalysisPrefs, SavedContext, SectionKey, Skill, Tier } from "@/lib/types"
 import { SetupSkillsPane } from "@/components/setup/setup-skills-pane"
 import { SetupContextsPane } from "@/components/setup/setup-contexts-pane"
 import { SetupAnalysisPane } from "@/components/setup/setup-analysis-pane"
+import { SetupResetPane } from "@/components/setup/setup-reset-pane"
 
-type Tab = "skills" | "contexts" | "analysis"
+type Tab = "skills" | "contexts" | "analysis" | "reset"
 
 interface Props {
   open: boolean
@@ -71,6 +72,7 @@ export function SetupDialog({
     { id: "skills", label: "Skills", icon: ScrollText, count: skills.length },
     { id: "contexts", label: "Contexts", icon: Layers, count: contexts.length },
     { id: "analysis", label: "Analysis", icon: SlidersHorizontal },
+    { id: "reset", label: "Reset", icon: RotateCcw },
   ]
 
   return (
@@ -170,6 +172,7 @@ export function SetupDialog({
                 onMaxSuggestionsChange={onMaxSuggestionsChange}
               />
             )}
+            {tab === "reset" && <SetupResetPane />}
           </div>
         </div>
       </div>
