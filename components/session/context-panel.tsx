@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { Eye, Loader2, Lock, Pencil, SlidersHorizontal, Trash2, Upload } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Info, Loader2, Lock, SlidersHorizontal, Trash2, Upload, X } from "lucide-react"
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { InfoTooltip } from "@/components/session/info-tooltip"
@@ -30,10 +30,9 @@ export function ContextPanel({
   onManageGlobal,
 }: Props) {
   const [name, setName] = useState("")
-  const [previewId, setPreviewId] = useState<string | null>(null)
-  const [editId, setEditId] = useState<string | null>(null)
-  const [editName, setEditName] = useState("")
-  const [editText, setEditText] = useState("")
+  // The saved context whose details modal is open.
+  const [detailsId, setDetailsId] = useState<string | null>(null)
+  const detailsContext = detailsId ? contexts.find((c) => c.id === detailsId) ?? null : null
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
@@ -70,13 +69,6 @@ export function ContextPanel({
     } finally {
       setImporting(false)
     }
-  }
-
-  const startEdit = (c: SavedContext) => {
-    setPreviewId(null)
-    setEditId(c.id)
-    setEditName(c.name)
-    setEditText(c.text)
   }
 
   return (
@@ -158,183 +150,230 @@ export function ContextPanel({
         </button>
       </div>
 
-      {/* Saved contexts list */}
+      {/* Saved contexts — cards */}
       {contexts.length > 0 && (
-        <ul className="flex flex-col divide-y divide-gray-2 border border-gray-2">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {contexts.map((c) => {
-            const isPreview = previewId === c.id
-            const isEdit = editId === c.id
             const local = isLocal(c)
+            const preview =
+              c.text.length > 150 ? `${c.text.slice(0, 150).trimEnd()}…` : c.text
             return (
-              <li key={c.id} className="flex flex-col">
-                <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        local
-                          ? onContextChange(c.text)
-                          : setPreviewId(isPreview ? null : c.id)
-                      }
-                      className="truncate text-left text-sm font-medium text-graphite hover:text-tr-orange"
-                      title={local ? "Load into editor" : "Preview"}
-                    >
-                      {c.name}
-                    </button>
-                    {!local && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-3">
-                        <Lock className="h-3 w-3" aria-hidden />
-                        Global — manage in Settings
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <IconBtn
-                      label="Preview"
-                      onClick={() => {
-                        setEditId(null)
-                        setPreviewId(isPreview ? null : c.id)
-                      }}
-                      active={isPreview}
-                    >
-                      <Eye className="h-4 w-4" aria-hidden />
-                    </IconBtn>
-                    {local ? (
-                      <>
-                        <IconBtn
-                          label="Edit"
-                          onClick={() => (isEdit ? setEditId(null) : startEdit(c))}
-                          active={isEdit}
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden />
-                        </IconBtn>
-                        <IconBtn label="Delete" onClick={() => onRemove(c.id)} danger>
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </IconBtn>
-                      </>
-                    ) : (
-                      <IconBtn label="Manage in Settings" onClick={onManageGlobal}>
-                        <SlidersHorizontal className="h-4 w-4" aria-hidden />
-                      </IconBtn>
-                    )}
-                  </div>
-                </div>
-
-                {/* Inline preview */}
-                {isPreview && (
-                  <div className="border-t border-gray-2 bg-gray-1 px-3 py-3">
-                    <p className="ds-scroll max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-                      {c.text}
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewId(null)}
-                        className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
-                      >
-                        Close
-                      </button>
-                      {local ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onContextChange(c.text)
-                            setPreviewId(null)
-                          }}
-                          className="border border-racing-green bg-white px-3 py-1.5 text-xs font-semibold text-racing-green hover:bg-racing-green hover:text-white"
-                        >
-                          Load into editor
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={onManageGlobal}
-                          className="inline-flex items-center gap-1.5 border border-racing-green bg-white px-3 py-1.5 text-xs font-semibold text-racing-green hover:bg-racing-green hover:text-white"
-                        >
-                          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-                          Manage in Settings
-                        </button>
-                      )}
-                    </div>
-                  </div>
+              <div
+                key={c.id}
+                className="flex h-full flex-col border border-gray-2 bg-white p-3"
+              >
+                <p className="text-sm font-semibold leading-snug text-graphite">{c.name}</p>
+                {!local && (
+                  <span className="mt-1 inline-flex w-fit items-center gap-1 text-[11px] font-medium text-gray-3">
+                    <Lock className="h-3 w-3" aria-hidden />
+                    Global
+                  </span>
                 )}
-
-                {/* Inline edit */}
-                {isEdit && (
-                  <div className="flex flex-col gap-2 border-t border-gray-2 bg-gray-1 px-3 py-3">
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      aria-label="Edit context name"
-                      className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none focus:border-racing-green"
-                    />
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={5}
-                      aria-label="Edit context text"
-                      className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none focus:border-racing-green"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditId(null)}
-                        className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!editName.trim()) return
-                          onUpdate(c.id, editName.trim(), editText)
-                          setEditId(null)
-                        }}
-                        className="border border-racing-green bg-racing-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-racing-green-light"
-                      >
-                        Save changes
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </li>
+                <p className="mt-1 text-xs leading-relaxed text-gray-4">
+                  {preview || "No text yet."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setDetailsId(c.id)}
+                  className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
+                >
+                  <Info className="h-3 w-3" aria-hidden />
+                  Details
+                </button>
+              </div>
             )
           })}
-        </ul>
+        </div>
+      )}
+
+      {detailsContext && (
+        <ContextDetails
+          context={detailsContext}
+          onClose={() => setDetailsId(null)}
+          onSave={(cName, cText) => onUpdate(detailsContext.id, cName, cText)}
+          onDelete={() => {
+            onRemove(detailsContext.id)
+            setDetailsId(null)
+          }}
+          onManageGlobal={onManageGlobal}
+        />
       )}
     </section>
   )
 }
 
-function IconBtn({
-  children,
-  label,
-  onClick,
-  active,
-  danger,
-}: {
-  children: React.ReactNode
-  label: string
-  onClick: () => void
-  active?: boolean
-  danger?: boolean
-}) {
+interface DetailsProps {
+  context: SavedContext
+  onClose: () => void
+  onSave: (name: string, text: string) => void
+  onDelete: () => void
+  onManageGlobal: () => void
+}
+
+// A modal to view a saved context in full, and (for local entries) edit or delete it.
+function ContextDetails({ context, onClose, onSave, onDelete, onManageGlobal }: DetailsProps) {
+  // Global entries are managed in Settings, so they are view-only here.
+  const readOnly = !isLocal(context)
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(context.name)
+  const [text, setText] = useState(context.text)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Close on Escape for keyboard users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  const save = () => {
+    if (!name.trim()) return
+    onSave(name.trim(), text)
+    setEditing(false)
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={`flex h-8 w-8 items-center justify-center border transition-colors ${
-        active
-          ? "border-racing-green bg-racing-green text-white"
-          : danger
-            ? "border-transparent text-gray-4 hover:border-tr-red hover:text-tr-red"
-            : "border-transparent text-gray-4 hover:border-gray-3 hover:text-graphite"
-      }`}
-    >
-      {children}
-    </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-graphite/70 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${context.name} details`}
+        className="ds-fade-in-up relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden border border-gray-2 bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-gray-2 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4">
+              {readOnly ? "Global context" : "Saved context"}
+            </p>
+            <h3 className="mt-1 text-base font-semibold leading-snug text-graphite">
+              {editing ? "Edit context" : context.name}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close details"
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-gray-3 transition-colors hover:text-graphite"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+
+        <div className="ds-scroll flex-1 overflow-y-auto px-5 py-4">
+          {editing ? (
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                aria-label="Context name"
+                className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none focus:border-racing-green"
+              />
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={10}
+                aria-label="Context text"
+                className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none focus:border-racing-green"
+              />
+            </div>
+          ) : (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-graphite">
+              {context.text || "No text yet."}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-t border-gray-2 px-5 py-3">
+          {readOnly ? (
+            <>
+              <button
+                type="button"
+                onClick={onManageGlobal}
+                className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-racing-green transition-colors hover:border-racing-green"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+                Manage in Settings
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
+              >
+                Close
+              </button>
+            </>
+          ) : editing ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false)
+                  setName(context.name)
+                  setText(context.text)
+                }}
+                className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={!name.trim()}
+                className="border border-racing-green bg-racing-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-racing-green-light disabled:cursor-not-allowed disabled:border-gray-2 disabled:bg-gray-2 disabled:text-gray-3"
+              >
+                Save changes
+              </button>
+            </>
+          ) : confirmDelete ? (
+            <>
+              <span className="text-xs font-medium text-graphite">Delete this context?</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="inline-flex items-center gap-1.5 border border-tr-red bg-tr-red px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  Delete
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex items-center gap-1.5 border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-tr-red transition-colors hover:border-tr-red"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="border border-racing-green bg-racing-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-racing-green-light"
+              >
+                Edit context
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
