@@ -18,8 +18,8 @@ import { ToggleSwitch } from "@/components/setup/toggle-switch"
 
 interface Props {
   open: boolean
-  /** Set a default skill's platform-level visibility. */
-  onSetSkillHidden: (id: string, hidden: boolean) => void
+  /** Pre-select a skill for the session review flow (does not hide anything). */
+  onSetSkillActive: (id: string, active: boolean) => void
   /** Mark onboarding finished (also used for "skip"). */
   onComplete: () => void
 }
@@ -46,7 +46,7 @@ const ROLES: { id: string; label: string; hint: string; skills: string[] }[] = [
 
 const STEP_COUNT = 5
 
-export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) {
+export function OnboardingDialog({ open, onSetSkillActive, onComplete }: Props) {
   const [step, setStep] = useState(0)
   const [roles, setRoles] = useState<Set<string>>(new Set())
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
@@ -93,9 +93,11 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
 
   const finish = (apply: boolean) => {
     if (apply) {
-      // Feed global settings: keep chosen lenses visible, hide the rest.
+      // Pre-select chosen lenses for the review flow. This only sets their
+      // session "active" state — nothing is hidden. Users still see every skill
+      // in Settings and can disable them there if they want to hide any.
       for (const s of DEFAULT_SKILLS) {
-        onSetSkillHidden(s.id, !selectedSkills.has(s.id))
+        onSetSkillActive(s.id, selectedSkills.has(s.id))
       }
     }
     onComplete()

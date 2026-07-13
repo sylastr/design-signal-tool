@@ -235,6 +235,14 @@ export function useSkills() {
     )
   }, [])
 
+  // Set a skill's session selection (active) to an explicit value. Used by
+  // onboarding to pre-select skills for the review flow without hiding any.
+  const setActive = useCallback((id: string, active: boolean) => {
+    setSkills((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, active } : s)),
+    )
+  }, [])
+
   const addCustom = useCallback(
     (name: string, instructions: string) => {
       setSkills((prev) => {
@@ -286,5 +294,5 @@ export function useSkills() {
     [persistHidden],
   )
 
-  return { skills, toggle, addCustom, updateCustom, removeCustom, setHidden }
+  return { skills, toggle, setActive, addCustom, updateCustom, removeCustom, setHidden }
 }
