@@ -14,7 +14,6 @@ import {
   Type,
 } from "lucide-react"
 import { DEFAULT_SKILLS } from "@/lib/types"
-import { ToggleSwitch } from "@/components/setup/toggle-switch"
 
 interface Props {
   open: boolean
@@ -322,7 +321,7 @@ function SkillsStep({
     <>
       <StepHeading
         title="Choose your review lenses"
-        subtitle="These are the expert skills the AI reviews through. You will also be able to add your own. Change it anytime in Settings."
+        subtitle="Pick the ones to pre-select for your reviews — you can change them per review and add your own anytime in Settings."
       />
       <ul className="mt-7 flex flex-col gap-2.5">
         {DEFAULT_SKILLS.map((s) => {
@@ -330,27 +329,34 @@ function SkillsStep({
           const Icon = meta?.icon ?? Target
           const on = selected.has(s.id)
           return (
-            <li
-              key={s.id}
-              className={`flex items-center gap-3 border px-4 py-3 transition-colors ${
-                on ? "border-racing-green bg-gray-1" : "border-gray-2 bg-white"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0 text-tr-orange" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-graphite">{s.name}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-gray-4">{meta?.short}</p>
-              </div>
-              <ToggleSwitch
-                checked={on}
-                onChange={() => onToggle(s.id)}
-                label={`Enable the ${s.name} lens`}
-              />
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onToggle(s.id)}
+                aria-pressed={on}
+                className={`flex w-full items-center gap-3 border px-4 py-3 text-left transition-colors ${
+                  on ? "border-racing-green bg-gray-1" : "border-gray-2 bg-white hover:border-gray-3"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0 text-tr-orange" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-graphite">{s.name}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-gray-4">{meta?.short}</p>
+                </div>
+                <span
+                  aria-hidden
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+                    on ? "border-racing-green bg-racing-green text-white" : "border-gray-3 bg-white"
+                  }`}
+                >
+                  {on && <Check className="h-3.5 w-3.5" />}
+                </span>
+              </button>
             </li>
           )
         })}
       </ul>
-      <p className="mt-3 text-xs text-gray-4">At least one lens is required.</p>
+      <p className="mt-3 text-xs text-gray-4">Select at least one lens.</p>
     </>
   )
 }
