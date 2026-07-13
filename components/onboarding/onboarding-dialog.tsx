@@ -320,7 +320,7 @@ function SkillsStep({
     <>
       <StepHeading
         title="Choose your review lenses"
-        subtitle="These are the expert perspectives the AI reviews through. Pick what matters — change it anytime in Settings."
+        subtitle="These are the expert skills the AI reviews through. You will also be able to add your own. Change it anytime in Settings."
       />
       <ul className="mt-7 flex flex-col gap-2.5">
         {DEFAULT_SKILLS.map((s) => {
