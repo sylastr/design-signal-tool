@@ -443,7 +443,7 @@ export function ResultView({
         </p>
         {result.consider && result.consider.length > 0 && (
           <div className="mt-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-4">Consider</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-4">Recommended changes</p>
             <ul className="mt-1.5 flex flex-col gap-1">
               {result.consider.map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-graphite">
