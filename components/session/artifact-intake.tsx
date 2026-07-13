@@ -538,7 +538,7 @@ export function ArtifactIntake({
                 return (
                   <li key={a.id}>
                     <div
-                      className={`flex items-center gap-3 rounded-md bg-gray-1 px-2 py-1.5 transition-colors ${
+                      className={`flex items-center gap-3 bg-white px-2 py-1.5 transition-colors ${
                         isSelected
                           ? "ring-2 ring-tr-orange"
                           : "ring-1 ring-gray-2 hover:ring-gray-3"
@@ -556,7 +556,7 @@ export function ArtifactIntake({
                         }
                         className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       >
-                        <span className="relative block h-10 w-14 shrink-0 overflow-hidden rounded bg-white ring-1 ring-gray-2">
+                        <span className="relative block h-10 w-14 shrink-0 overflow-hidden border border-gray-2 bg-white">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={a.dataUrl || "/placeholder.svg"}
