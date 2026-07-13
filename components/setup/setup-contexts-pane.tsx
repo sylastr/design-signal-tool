@@ -121,7 +121,7 @@ export function SetupContextsPane({
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={4}
-            placeholder="e.g. Target users are legal researchers; goal is to reduce time-to-first-result; must follow TR brand guidelines..."
+            placeholder="e.g. Target users are busy Tax professionals who want save time during tax season by reducing redudant tasks; main goal is to focus in reviewing tax returns instead of wasting time entering data; must follow TR brand guidelines..."
             aria-label="New context text"
             className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
           />
