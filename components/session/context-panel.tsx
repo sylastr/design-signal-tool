@@ -72,7 +72,12 @@ export function ContextPanel({
   }
 
   return (
-    <section aria-labelledby="context-heading" className="flex flex-col gap-4">
+    <section
+      aria-labelledby="context-heading"
+      className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8"
+    >
+      {/* Left: compose column (constrained for comfortable line length) */}
+      <div className="flex flex-col gap-4">
       <div className="flex items-center gap-1.5">
         <h2
           id="context-heading"
@@ -149,46 +154,47 @@ export function ContextPanel({
           Save
         </button>
       </div>
+      </div>
 
-      {/* Saved contexts — cards */}
+      {/* Right: saved contexts sidebar */}
       {contexts.length > 0 && (
-        <div className="flex flex-col gap-2.5">
+        <aside className="flex min-w-0 flex-col gap-2.5 lg:border-l lg:border-gray-2 lg:pl-8">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4">
             Saved Contexts
           </h3>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-          {contexts.map((c) => {
-            const local = isLocal(c)
-            const preview =
-              c.text.length > 150 ? `${c.text.slice(0, 150).trimEnd()}…` : c.text
-            return (
-              <div
-                key={c.id}
-                className="flex h-full flex-col border border-gray-2 bg-white p-3"
-              >
-                <p className="text-sm font-semibold leading-snug text-graphite">{c.name}</p>
-                {!local && (
-                  <span className="mt-1 inline-flex w-fit items-center gap-1 text-[11px] font-medium text-gray-3">
-                    <Lock className="h-3 w-3" aria-hidden />
-                    Global
-                  </span>
-                )}
-                <p className="mt-1 text-xs leading-relaxed text-gray-4">
-                  {preview || "No text yet."}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setDetailsId(c.id)}
-                  className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
+          <div className="ds-scroll flex flex-col gap-2.5 lg:max-h-[360px] lg:overflow-y-auto lg:pr-1">
+            {contexts.map((c) => {
+              const local = isLocal(c)
+              const preview =
+                c.text.length > 150 ? `${c.text.slice(0, 150).trimEnd()}…` : c.text
+              return (
+                <div
+                  key={c.id}
+                  className="flex flex-col border border-gray-2 bg-white p-3"
                 >
-                  <Info className="h-3 w-3" aria-hidden />
-                  Details
-                </button>
-              </div>
-            )
-          })}
+                  <p className="text-sm font-semibold leading-snug text-graphite">{c.name}</p>
+                  {!local && (
+                    <span className="mt-1 inline-flex w-fit items-center gap-1 text-[11px] font-medium text-gray-3">
+                      <Lock className="h-3 w-3" aria-hidden />
+                      Global
+                    </span>
+                  )}
+                  <p className="mt-1 text-xs leading-relaxed text-gray-4">
+                    {preview || "No text yet."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setDetailsId(c.id)}
+                    className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
+                  >
+                    <Info className="h-3 w-3" aria-hidden />
+                    Details
+                  </button>
+                </div>
+              )
+            })}
           </div>
-        </div>
+        </aside>
       )}
 
       {detailsContext && (
