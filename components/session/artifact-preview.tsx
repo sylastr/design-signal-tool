@@ -60,7 +60,7 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
             type="button"
             onClick={onClose}
             aria-label="Close preview"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-graphite/70 transition-colors hover:bg-graphite/10 hover:text-graphite"
+            className="flex h-9 w-9 items-center justify-center text-graphite/70 transition-colors hover:bg-graphite/10 hover:text-graphite"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>
@@ -77,7 +77,7 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
               onIndexChange(index - 1)
             }}
             aria-label="Previous image"
-            className="absolute left-4 flex h-11 w-11 items-center justify-center rounded-full bg-graphite/10 text-graphite transition-colors hover:bg-graphite/20"
+            className="absolute left-4 flex h-11 w-11 items-center justify-center bg-graphite/10 text-graphite transition-colors hover:bg-graphite/20"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden />
           </button>
@@ -99,7 +99,7 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
               onIndexChange(index + 1)
             }}
             aria-label="Next image"
-            className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-full bg-graphite/10 text-graphite transition-colors hover:bg-graphite/20"
+            className="absolute right-4 flex h-11 w-11 items-center justify-center bg-graphite/10 text-graphite transition-colors hover:bg-graphite/20"
           >
             <ChevronRight className="h-6 w-6" aria-hidden />
           </button>
