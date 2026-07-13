@@ -48,7 +48,7 @@ const STEP_COUNT = 5
 
 export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) {
   const [step, setStep] = useState(0)
-  const [role, setRole] = useState<string | null>(null)
+  const [roles, setRoles] = useState<Set<string>>(new Set())
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
   const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -63,9 +63,17 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
     }
   }, [open])
 
-  const pickRole = (r: (typeof ROLES)[number]) => {
-    setRole(r.id)
-    setSelectedSkills(new Set(r.skills))
+  const toggleRole = (r: (typeof ROLES)[number]) => {
+    const nextRoles = new Set(roles)
+    if (nextRoles.has(r.id)) nextRoles.delete(r.id)
+    else nextRoles.add(r.id)
+    setRoles(nextRoles)
+    // Recommend the union of every selected role's lenses.
+    const union = new Set<string>()
+    for (const role of ROLES) {
+      if (nextRoles.has(role.id)) role.skills.forEach((s) => union.add(s))
+    }
+    setSelectedSkills(union)
   }
 
   const toggleSkill = (id: string) => {
@@ -78,10 +86,10 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
   }
 
   const canAdvance = useMemo(() => {
-    if (step === 1) return role !== null
+    if (step === 1) return roles.size > 0
     if (step === 2) return selectedSkills.size > 0
     return true
-  }, [step, role, selectedSkills])
+  }, [step, roles, selectedSkills])
 
   const finish = (apply: boolean) => {
     if (apply) {
@@ -129,7 +137,7 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
           </div>
 
           {step === 0 && <WelcomeStep />}
-          {step === 1 && <RoleStep role={role} onPick={pickRole} />}
+          {step === 1 && <RoleStep roles={roles} onToggle={toggleRole} />}
           {step === 2 && <SkillsStep selected={selectedSkills} onToggle={toggleSkill} />}
           {step === 3 && <ContextStep />}
           {step === 4 && <DoneStep lensCount={selectedSkills.size} />}
@@ -260,21 +268,27 @@ function WelcomeStep() {
   )
 }
 
-function RoleStep({ role, onPick }: { role: string | null; onPick: (r: (typeof ROLES)[number]) => void }) {
+function RoleStep({
+  roles,
+  onToggle,
+}: {
+  roles: Set<string>
+  onToggle: (r: (typeof ROLES)[number]) => void
+}) {
   return (
     <>
       <StepHeading
         title="What's your role?"
-        subtitle="We'll recommend the review lenses that fit your work. You can fine-tune them next."
+        subtitle="Select all that apply — we'll recommend the review lenses that fit your work. You can fine-tune them next."
       />
       <div className="mt-7 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         {ROLES.map((r) => {
-          const selected = role === r.id
+          const selected = roles.has(r.id)
           return (
             <button
               key={r.id}
               type="button"
-              onClick={() => onPick(r)}
+              onClick={() => onToggle(r)}
               aria-pressed={selected}
               className={`flex items-center justify-between gap-2 border px-4 py-3 text-left transition-colors ${
                 selected
