@@ -75,33 +75,33 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
               type="button"
               onClick={() => onToggle(s.id)}
               aria-pressed={s.active}
-              className={`flex h-full w-full flex-col items-start gap-1 border p-3 text-left transition-colors ${
+              className={`flex h-full w-full items-center gap-3 border p-3 text-left transition-colors ${
                 s.active
-                  ? "border-racing-green bg-racing-green/5"
+                  ? "border-racing-green bg-gray-1"
                   : "border-gray-2 bg-white hover:border-gray-3"
               }`}
             >
-              <span className="flex w-full items-start justify-between gap-2">
+              <span className="min-w-0 flex-1">
                 <span
-                  className={`text-sm font-semibold leading-snug ${
-                    s.active ? "text-racing-green" : "text-graphite"
-                  } ${s.custom ? "pr-5" : ""}`}
+                  className={`block text-sm font-semibold leading-snug text-graphite ${
+                    s.custom ? "pr-5" : ""
+                  }`}
                 >
                   {s.name}
                 </span>
-                <span
-                  aria-hidden
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
-                    s.active
-                      ? "border-racing-green bg-racing-green text-white"
-                      : "border-gray-3 bg-white"
-                  }`}
-                >
-                  {s.active && <Check className="h-3.5 w-3.5" />}
+                <span className="mt-0.5 block text-xs leading-relaxed text-gray-4">
+                  {s.description || "Custom skill."}
                 </span>
               </span>
-              <span className="text-xs leading-relaxed text-gray-4">
-                {s.description || "Custom skill."}
+              <span
+                aria-hidden
+                className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+                  s.active
+                    ? "border-racing-green bg-racing-green text-white"
+                    : "border-gray-3 bg-white"
+                }`}
+              >
+                {s.active && <Check className="h-3.5 w-3.5" />}
               </span>
             </button>
             {s.custom && (
