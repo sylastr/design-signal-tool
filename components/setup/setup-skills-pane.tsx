@@ -8,8 +8,8 @@ import { ToggleSwitch } from "@/components/setup/toggle-switch"
 
 interface Props {
   skills: Skill[]
-  onAddCustom: (name: string, instructions: string) => void
-  onUpdateCustom: (id: string, name: string, instructions: string) => void
+  onAddCustom: (name: string, description: string, instructions: string) => void
+  onUpdateCustom: (id: string, name: string, description: string, instructions: string) => void
   onRemoveCustom: (id: string) => void
   onToggleHidden: (id: string, hidden: boolean) => void
 }
@@ -23,10 +23,12 @@ export function SetupSkillsPane({
 }: Props) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const [instructions, setInstructions] = useState("")
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
   const [editInstructions, setEditInstructions] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
@@ -36,8 +38,9 @@ export function SetupSkillsPane({
 
   const submitNew = () => {
     if (!name.trim() || !instructions.trim()) return
-    onAddCustom(name.trim(), instructions.trim())
+    onAddCustom(name.trim(), description.trim(), instructions.trim())
     setName("")
+    setDescription("")
     setInstructions("")
     setImportError(null)
     setAdding(false)
@@ -71,12 +74,13 @@ export function SetupSkillsPane({
     setExpandedId(s.id)
     setEditId(s.id)
     setEditName(s.name)
+    setEditDescription(s.description ?? "")
     setEditInstructions(s.instructions)
   }
 
   const submitEdit = () => {
     if (!editId || !editName.trim() || !editInstructions.trim()) return
-    onUpdateCustom(editId, editName.trim(), editInstructions.trim())
+    onUpdateCustom(editId, editName.trim(), editDescription.trim(), editInstructions.trim())
     setEditId(null)
   }
 
@@ -115,6 +119,14 @@ export function SetupSkillsPane({
             onChange={(e) => setName(e.target.value)}
             placeholder="Skill name"
             aria-label="New skill name"
+            className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Short description — one line shown on the skill card"
+            aria-label="New skill description"
             className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
           />
           <textarea
@@ -165,6 +177,7 @@ export function SetupSkillsPane({
               onClick={() => {
                 setAdding(false)
                 setName("")
+                setDescription("")
                 setInstructions("")
                 setImportError(null)
               }}
@@ -216,7 +229,7 @@ export function SetupSkillsPane({
                       {s.name}
                     </span>
                     <span className="truncate text-xs text-gray-3">
-                      {s.custom ? "Custom skill" : "Built-in skill"}
+                      {s.description || (s.custom ? "Custom skill" : "Built-in skill")}
                     </span>
                   </span>
                 </button>
@@ -263,6 +276,14 @@ export function SetupSkillsPane({
                         onChange={(e) => setEditName(e.target.value)}
                         aria-label="Edit skill name"
                         className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none focus:border-racing-green"
+                      />
+                      <input
+                        type="text"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="Short description — one line shown on the skill card"
+                        aria-label="Edit skill description"
+                        className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
                       />
                       <textarea
                         value={editInstructions}

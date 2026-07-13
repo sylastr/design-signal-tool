@@ -32,7 +32,10 @@ export function SetupContextsPane({
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
 
-  const visibleCount = contexts.filter((c) => !c.hidden).length
+  // Settings only manages global contexts. Session-only ("local") contexts live in
+  // the review's own context panel and must not appear here.
+  const globalContexts = contexts.filter((c) => c.scope !== "local")
+  const visibleCount = globalContexts.filter((c) => !c.hidden).length
 
   const submitNew = () => {
     if (!name.trim() || !text.trim()) return
@@ -89,7 +92,7 @@ export function SetupContextsPane({
             Reusable project &amp; product background composed into every review. Hide entries
             you don&apos;t want applied, or add new ones.{" "}
             <span className="font-medium text-graphite">
-              {visibleCount} of {contexts.length} shown
+              {visibleCount} of {globalContexts.length} shown
             </span>
             .
           </p>
@@ -184,13 +187,13 @@ export function SetupContextsPane({
         </div>
       )}
 
-      {contexts.length === 0 ? (
+      {globalContexts.length === 0 ? (
         <p className="border border-dashed border-gray-2 px-4 py-8 text-center text-sm text-gray-3">
           No saved contexts yet. Add one to reuse it across reviews.
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-gray-2 border border-gray-2">
-          {contexts.map((c) => {
+          {globalContexts.map((c) => {
             const isExpanded = expandedId === c.id
             const isEdit = editId === c.id
             return (

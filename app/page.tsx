@@ -60,8 +60,15 @@ export default function Page() {
   const [contextText, setContextText] = useDraftContext()
   const { prefs, setTier, setSection, setMaxSuggestions } = useAnalysisPrefs()
   const { contexts, add, update, remove, setHidden: setContextHidden } = useSavedContexts()
-  const { skills, toggle, addCustom, updateCustom, removeCustom, setHidden: setSkillHidden } =
-    useSkills()
+  const {
+    skills,
+    toggle,
+    setActive: setSkillActive,
+    addCustom,
+    updateCustom,
+    removeCustom,
+    setHidden: setSkillHidden,
+  } = useSkills()
   const { completed: onboardingCompleted, hydrated: onboardingHydrated, complete: completeOnboarding } =
     useOnboarding()
 
@@ -272,7 +279,7 @@ export default function Page() {
 
       <OnboardingDialog
         open={onboardingHydrated && !onboardingCompleted}
-        onSetSkillHidden={setSkillHidden}
+        onSetSkillActive={setSkillActive}
         onComplete={completeOnboarding}
       />
 
@@ -352,6 +359,7 @@ export default function Page() {
                 skills={visibleSkills}
                 onToggle={toggle}
                 onAddCustom={addCustom}
+                onUpdateCustom={updateCustom}
                 onRemoveCustom={removeCustom}
               />
             )}

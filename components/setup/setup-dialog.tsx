@@ -18,8 +18,8 @@ interface Props {
   skills: Skill[]
   contexts: SavedContext[]
   analysisPrefs: AnalysisPrefs
-  onAddSkill: (name: string, instructions: string) => void
-  onUpdateSkill: (id: string, name: string, instructions: string) => void
+  onAddSkill: (name: string, description: string, instructions: string) => void
+  onUpdateSkill: (id: string, name: string, description: string, instructions: string) => void
   onRemoveSkill: (id: string) => void
   onToggleSkillHidden: (id: string, hidden: boolean) => void
   onAddContext: (name: string, text: string) => void
@@ -78,7 +78,13 @@ export function SetupDialog({
 
   const navItems: { id: Tab; label: string; icon: typeof Layers; count?: number }[] = [
     { id: "skills", label: "Skills", icon: ScrollText, count: skills.length },
-    { id: "contexts", label: "Contexts", icon: Layers, count: contexts.length },
+    {
+      id: "contexts",
+      label: "Contexts",
+      icon: Layers,
+      // Only global contexts are managed here; session-only ("local") ones are excluded.
+      count: contexts.filter((c) => c.scope !== "local").length,
+    },
     { id: "analysis", label: "Analysis", icon: SlidersHorizontal },
     { id: "reset", label: "Reset", icon: RotateCcw },
   ]

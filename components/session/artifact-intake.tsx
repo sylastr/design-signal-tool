@@ -315,7 +315,9 @@ export function ArtifactIntake({
         )}
       </div>
 
-      {/* Drop zone */}
+      {/* Two-column: dropzone (left, 1fr) + gallery / blank state (right, 2fr) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-8">
+      {/* Left: drop zone */}
       <div
         onDragOver={(e) => {
           e.preventDefault()
@@ -327,7 +329,7 @@ export function ArtifactIntake({
           setDragging(false)
           handleFiles(e.dataTransfer.files)
         }}
-        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-10 text-center transition-colors ${
+        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-10 text-center transition-colors lg:max-h-[460px] lg:self-stretch ${
           dragging ? "border-tr-orange bg-gray-1" : "border-gray-2 bg-white"
         }`}
       >
@@ -383,8 +385,18 @@ export function ArtifactIntake({
         />
       </div>
 
-      {/* Toolbar + artifacts */}
-      {artifacts.length > 0 && (
+      {/* Right: blank state when no images yet */}
+      {artifacts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 border border-dashed border-gray-2 px-4 py-10 text-center">
+          <ImageIcon className="h-6 w-6 text-gray-3" aria-hidden />
+          <p className="text-sm font-medium text-graphite">No designs added yet</p>
+          <p className="max-w-[260px] text-xs leading-relaxed text-gray-4">
+            Uploaded designs will appear here. Add a screen, flow, or mockup on the left to get
+            started.
+          </p>
+        </div>
+      ) : (
+        /* Right: toolbar + artifacts */
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3 text-[11px] font-medium">
             {artifacts.length > 1 && (
@@ -416,7 +428,8 @@ export function ArtifactIntake({
               </>
             )}
 
-            {/* Cards / list view toggle */}
+            {/* Cards / list view toggle — only worth showing with more than 2 artifacts */}
+            {artifacts.length > 2 && (
             <div
               role="group"
               aria-label="View mode"
@@ -449,6 +462,7 @@ export function ArtifactIntake({
                 <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
+            )}
           </div>
 
           {viewMode === "cards" ? (
@@ -460,7 +474,7 @@ export function ArtifactIntake({
                 return (
                   <li key={a.id}>
                     <div
-                      className={`flex flex-col overflow-hidden rounded-lg bg-gray-1 transition-colors ${
+                      className={`flex flex-col overflow-hidden bg-white transition-colors ${
                         isSelected
                           ? "ring-2 ring-tr-orange"
                           : "ring-1 ring-gray-2 hover:ring-gray-3"
@@ -490,7 +504,7 @@ export function ArtifactIntake({
                               ? `Preview artifact ${a.name}`
                               : `Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`
                           }
-                          className="block aspect-[4/3] w-full overflow-hidden rounded bg-white"
+                          className="block aspect-[4/3] w-full overflow-hidden border border-gray-2 bg-white"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -526,7 +540,7 @@ export function ArtifactIntake({
                 return (
                   <li key={a.id}>
                     <div
-                      className={`flex items-center gap-3 rounded-md bg-gray-1 px-2 py-1.5 transition-colors ${
+                      className={`flex items-center gap-3 bg-white px-2 py-1.5 transition-colors ${
                         isSelected
                           ? "ring-2 ring-tr-orange"
                           : "ring-1 ring-gray-2 hover:ring-gray-3"
@@ -544,7 +558,7 @@ export function ArtifactIntake({
                         }
                         className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       >
-                        <span className="relative block h-10 w-14 shrink-0 overflow-hidden rounded bg-white ring-1 ring-gray-2">
+                        <span className="relative block h-10 w-14 shrink-0 overflow-hidden border border-gray-2 bg-white">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={a.dataUrl || "/placeholder.svg"}
@@ -586,6 +600,7 @@ export function ArtifactIntake({
           </p>
         </div>
       )}
+      </div>
 
       {/* Full-screen preview */}
       {previewIndex !== null && artifacts[previewIndex] && (

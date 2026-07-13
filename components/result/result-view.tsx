@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Maximize2, X } from "lucide-react"
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, X } from "lucide-react"
 import type { AnalysisResult, AnalysisPrefs, Tier } from "@/lib/types"
 
 interface AnalyzedItem {
@@ -435,10 +435,26 @@ export function ResultView({
         </div>
       )}
 
-      {/* Artifact summary */}
-      <p className="mt-5 border-l-2 border-tr-orange pl-3 text-[15px] leading-relaxed text-graphite">
-        {result.artifact_summary}
-      </p>
+      {/* Review summary — quick verdict + what to change, so the reader can skip the detail */}
+      <div className="mt-5 border-l-2 border-tr-orange pl-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-tr-orange">Review Summary</h2>
+        <p className="mt-1.5 line-clamp-3 text-[15px] leading-relaxed text-graphite">
+          {result.feedback_summary ?? result.artifact_summary}
+        </p>
+        {result.consider && result.consider.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-4">Recommended changes</p>
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {result.consider.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-graphite">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-tr-orange" aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
       {/* Two-column layout */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -446,20 +462,11 @@ export function ResultView({
         <div className="lg:sticky lg:top-24 lg:self-start">
           <div
             ref={imageBoxRef}
-            className="relative inline-block w-full select-none border border-gray-2 bg-gray-1"
+            onDoubleClick={() => setPreviewOpen(true)}
+            className="relative inline-block w-full cursor-zoom-in select-none border border-gray-2 bg-gray-1"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl || "/placeholder.svg"} alt="Analyzed design artifact" className="block w-full" />
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(true)}
-              aria-label="Preview image full screen"
-              title="Preview full screen"
-              className="absolute right-2 top-2 z-10 inline-flex items-center gap-1.5 border border-gray-2 bg-white/90 px-2 py-1 text-[11px] font-medium text-graphite backdrop-blur-sm transition-colors hover:bg-white hover:text-tr-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
-            >
-              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
-              Preview
-            </button>
             <div className="pointer-events-none absolute inset-0">
               {visibleAnnotations.map((a) => {
                 const meta = TIER_META[a.tier]
@@ -555,7 +562,7 @@ export function ResultView({
           </div>
           <p className="mt-2 text-[11px] text-gray-3">
             AI places markers approximately — drag a circle to move it, or drag the corner handles to resize its
-            region (hold Alt to resize from the center).
+            region (hold Alt to resize from the center). Double-click the image to open full-screen preview.
           </p>
         </div>
 
@@ -653,11 +660,11 @@ export function ResultView({
           role="dialog"
           aria-modal="true"
           aria-label={`Preview of ${items[currentIndex]?.name ?? "analyzed design"}`}
-          className="fixed inset-0 z-50 flex flex-col bg-graphite/95"
+          className="fixed inset-0 z-50 flex flex-col bg-white/60 backdrop-blur-md"
           onClick={() => setPreviewOpen(false)}
         >
           <div
-            className="flex items-center justify-between px-4 py-3 text-white"
+            className="flex items-center justify-between px-4 py-3 text-graphite"
             onClick={(e) => e.stopPropagation()}
           >
             <span className="min-w-0 truncate text-sm font-medium" title={items[currentIndex]?.name}>
@@ -667,7 +674,7 @@ export function ResultView({
               type="button"
               onClick={() => setPreviewOpen(false)}
               aria-label="Close preview"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center text-graphite/70 transition-colors hover:bg-graphite/10 hover:text-graphite"
             >
               <X className="h-5 w-5" aria-hidden />
             </button>
@@ -678,7 +685,11 @@ export function ResultView({
               src={imageUrl || "/placeholder.svg"}
               alt="Analyzed design artifact, full screen"
               onClick={(e) => e.stopPropagation()}
-              className="max-h-full max-w-full object-contain"
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                setPreviewOpen(false)
+              }}
+              className="max-h-full max-w-full cursor-zoom-out object-contain"
             />
           </div>
         </div>

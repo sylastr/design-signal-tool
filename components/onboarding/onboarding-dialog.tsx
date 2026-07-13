@@ -14,12 +14,11 @@ import {
   Type,
 } from "lucide-react"
 import { DEFAULT_SKILLS } from "@/lib/types"
-import { ToggleSwitch } from "@/components/setup/toggle-switch"
 
 interface Props {
   open: boolean
-  /** Set a default skill's platform-level visibility. */
-  onSetSkillHidden: (id: string, hidden: boolean) => void
+  /** Pre-select a skill for the session review flow (does not hide anything). */
+  onSetSkillActive: (id: string, active: boolean) => void
   /** Mark onboarding finished (also used for "skip"). */
   onComplete: () => void
 }
@@ -46,7 +45,7 @@ const ROLES: { id: string; label: string; hint: string; skills: string[] }[] = [
 
 const STEP_COUNT = 5
 
-export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) {
+export function OnboardingDialog({ open, onSetSkillActive, onComplete }: Props) {
   const [step, setStep] = useState(0)
   const [roles, setRoles] = useState<Set<string>>(new Set())
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
@@ -93,9 +92,11 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
 
   const finish = (apply: boolean) => {
     if (apply) {
-      // Feed global settings: keep chosen lenses visible, hide the rest.
+      // Pre-select chosen lenses for the review flow. This only sets their
+      // session "active" state — nothing is hidden. Users still see every skill
+      // in Settings and can disable them there if they want to hide any.
       for (const s of DEFAULT_SKILLS) {
-        onSetSkillHidden(s.id, !selectedSkills.has(s.id))
+        onSetSkillActive(s.id, selectedSkills.has(s.id))
       }
     }
     onComplete()
@@ -112,7 +113,7 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" role="presentation">
-      <div className="absolute inset-0 bg-graphite/70 backdrop-blur-sm" />
+      <div className="ds-fade-in absolute inset-0 bg-graphite/70 backdrop-blur-sm" />
 
       <div
         ref={dialogRef}
@@ -120,7 +121,7 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
         aria-modal="true"
         aria-labelledby="onboarding-title"
         tabIndex={-1}
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden border border-gray-2 bg-white shadow-2xl outline-none"
+        className="ds-fade-in-up relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden border border-gray-2 bg-white shadow-2xl outline-none"
       >
         {/* Brand hairline echoing the app header */}
         <div className="h-1 w-full shrink-0 bg-tr-orange" />
@@ -320,7 +321,7 @@ function SkillsStep({
     <>
       <StepHeading
         title="Choose your review lenses"
-        subtitle="These are the expert skills the AI reviews through. You will also be able to add your own. Change it anytime in Settings."
+        subtitle="Pick the ones to pre-select for your reviews — you can change them per review and add your own anytime in Settings."
       />
       <ul className="mt-7 flex flex-col gap-2.5">
         {DEFAULT_SKILLS.map((s) => {
@@ -328,27 +329,34 @@ function SkillsStep({
           const Icon = meta?.icon ?? Target
           const on = selected.has(s.id)
           return (
-            <li
-              key={s.id}
-              className={`flex items-center gap-3 border px-4 py-3 transition-colors ${
-                on ? "border-racing-green bg-gray-1" : "border-gray-2 bg-white"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0 text-tr-orange" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-graphite">{s.name}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-gray-4">{meta?.short}</p>
-              </div>
-              <ToggleSwitch
-                checked={on}
-                onChange={() => onToggle(s.id)}
-                label={`Enable the ${s.name} lens`}
-              />
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onToggle(s.id)}
+                aria-pressed={on}
+                className={`flex w-full items-center gap-3 border px-4 py-3 text-left transition-colors ${
+                  on ? "border-racing-green bg-gray-1" : "border-gray-2 bg-white hover:border-gray-3"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0 text-tr-orange" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-graphite">{s.name}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-gray-4">{meta?.short}</p>
+                </div>
+                <span
+                  aria-hidden
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
+                    on ? "border-racing-green bg-racing-green text-white" : "border-gray-3 bg-white"
+                  }`}
+                >
+                  {on && <Check className="h-3.5 w-3.5" />}
+                </span>
+              </button>
             </li>
           )
         })}
       </ul>
-      <p className="mt-3 text-xs text-gray-4">At least one lens is required.</p>
+      <p className="mt-3 text-xs text-gray-4">Select at least one lens.</p>
     </>
   )
 }
@@ -376,21 +384,16 @@ function ContextStep() {
         title="Two kinds of context"
         subtitle="Context turns generic notes into sharp, relevant critique. There are two ways to give it — you'll add both later, right where they fit."
       />
-      <div className="mt-7 flex flex-col gap-3">
+      <div className="mt-7 flex flex-col gap-6">
         {kinds.map((k) => {
           const Icon = k.icon
           return (
-            <div key={k.label} className="flex items-start gap-3 border border-gray-2 px-4 py-3.5">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center bg-gray-1"
-                aria-hidden
-              >
-                <Icon className="h-5 w-5 text-tr-orange" />
-              </span>
+            <div key={k.label} className="flex items-start gap-3 pl-4 border-l-2 border-gray-2">
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-tr-orange" aria-hidden />
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <p className="text-sm font-semibold text-graphite">{k.label}</p>
-                  <span className="border border-gray-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-3">
                     {k.tag}
                   </span>
                 </div>
@@ -422,9 +425,9 @@ function DoneStep({ lensCount }: { lensCount: number }) {
         title="You're all set"
         subtitle="Your workspace is configured. Upload a design to get your first review."
       />
-      <ul className="mx-auto mt-7 flex max-w-sm flex-col gap-2.5">
+      <ul className="mx-auto mt-7 flex max-w-sm flex-col gap-3.5">
         {items.map((it) => (
-          <li key={it} className="flex items-center gap-2.5 border border-gray-2 px-4 py-3">
+          <li key={it} className="flex items-center gap-2.5">
             <Check className="h-4 w-4 shrink-0 text-racing-green" aria-hidden />
             <span className="text-sm font-medium text-graphite">{it}</span>
           </li>
