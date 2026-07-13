@@ -43,8 +43,10 @@ export interface Annotation {
 
 export interface AnalysisResult {
   artifact_summary: string
-  /** 2-3 sentence executive synthesis of the whole review, for a quick assessment. */
+  /** Punchy 2-3 sentence executive verdict on the whole review, for a quick assessment. */
   feedback_summary?: string
+  /** 3-5 ultra-short action cues telling the designer what to change. */
+  consider?: string[]
   annotations: Annotation[]
 }
 

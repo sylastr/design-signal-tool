@@ -435,12 +435,25 @@ export function ResultView({
         </div>
       )}
 
-      {/* Assessment summary — quick synthesis so the reader can skip the detail if needed */}
+      {/* Review summary — quick verdict + what to change, so the reader can skip the detail */}
       <div className="mt-5 border-l-2 border-tr-orange pl-3">
-        <p className="text-xs font-medium text-gray-4">{result.artifact_summary}</p>
-        <p className="mt-1.5 text-[15px] leading-relaxed text-graphite">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-tr-orange">Review Summary</h2>
+        <p className="mt-1.5 line-clamp-3 text-[15px] leading-relaxed text-graphite">
           {result.feedback_summary ?? result.artifact_summary}
         </p>
+        {result.consider && result.consider.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-4">Consider</p>
+            <ul className="mt-1.5 flex flex-col gap-1">
+              {result.consider.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] leading-snug text-graphite">
+                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-tr-orange" aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Two-column layout */}

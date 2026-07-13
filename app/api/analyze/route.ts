@@ -47,7 +47,14 @@ const resultSchema = z.object({
   feedback_summary: z
     .string()
     .describe(
-      "A 2-3 sentence executive synthesis of the review as a whole, so a reader gets the overall assessment without reading each item. Written AFTER the annotations: name the dominant theme(s), how well the design serves the project/product context, and the most consequential thing to address. Ground it in the context and active skills — never generic.",
+      "A punchy 2-3 sentence executive verdict on the design as a whole (max ~55 words). Written AFTER the annotations: lead with the overall assessment, name the dominant theme, and make it impactful — a decision-maker should grasp the state of the design instantly. Ground it in the context and active skills; no throat-clearing or generic filler.",
+    ),
+  consider: z
+    .array(z.string())
+    .min(3)
+    .max(5)
+    .describe(
+      "3-5 ultra-short action cues (each ~2-6 words, imperative, e.g. 'Clarify jargon-heavy labels') telling the designer what to change. Derived from the top annotations. No sentences, no punctuation at the end.",
     ),
 })
 
@@ -124,7 +131,7 @@ export async function POST(req: Request) {
       ? `\n\n=== ALLOWED SEVERITY TIERS ===\nOnly return annotations whose tier is one of: ${allowedTiers.join(", ")}. Do not use any other tier. If the ${count} highest-impact issues would normally fall outside these tiers, choose the highest-impact issues that DO fit the allowed tiers.`
       : ""
 
-  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.${tierBlock}\n\n=== FEEDBACK SUMMARY ===\nAfter selecting the annotations, write "feedback_summary": a 2-3 sentence executive synthesis of the review as a whole so a busy reader gets the overall assessment without reading each item. Name the dominant theme(s) across the findings, say how well the design serves the project/product context, and call out the single most consequential thing to address. Ground it in the context and active skills — never generic filler.`
+  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.${tierBlock}\n\n=== REVIEW SUMMARY ===\nAfter selecting the annotations, write:\n- "feedback_summary": a punchy 2-3 sentence verdict (max ~55 words, fits in ~3 lines) delivering the overall assessment of the design. Lead with the verdict, name the dominant theme, make it impactful and grounded in the context and active skills. No throat-clearing, no generic filler.\n- "consider": 3-5 ultra-short action cues (each ~2-6 words, imperative, e.g. "Clarify jargon-heavy labels", "Surface rejected filings") capturing what the designer should change. Derive them from the top annotations. No full sentences, no trailing punctuation.`
 
   // Order matters: context comes first (primary lens), then the skills that
   // support evaluating the design against it, then the output-size constraint.
