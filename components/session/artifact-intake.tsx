@@ -87,9 +87,6 @@ export function ArtifactIntake({
   const [dragging, setDragging] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [pasteHint, setPasteHint] = useState<string | null>(null)
-  // Once artifacts exist, the dropzone collapses into a slim "Add more" bar so
-  // the gallery gets the space.
-  const hasArtifacts = artifacts.length > 0
 
   // Which card's context menu is open.
   const [menuId, setMenuId] = useState<string | null>(null)
@@ -318,7 +315,9 @@ export function ArtifactIntake({
         )}
       </div>
 
-      {/* Drop zone — full size when empty, collapses to a slim bar once artifacts exist */}
+      {/* Two-column: dropzone (left, 1fr) + gallery / blank state (right, 2fr) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-8">
+      {/* Left: drop zone */}
       <div
         onDragOver={(e) => {
           e.preventDefault()
@@ -330,50 +329,16 @@ export function ArtifactIntake({
           setDragging(false)
           handleFiles(e.dataTransfer.files)
         }}
-        className={
-          hasArtifacts
-            ? `flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border border-dashed px-4 py-2.5 text-center transition-colors ${
-                dragging ? "border-tr-orange bg-gray-1" : "border-gray-2 bg-white"
-              }`
-            : `flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-10 text-center transition-colors ${
-                dragging ? "border-tr-orange bg-gray-1" : "border-gray-2 bg-white"
-              }`
-        }
+        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-10 text-center transition-colors lg:h-full ${
+          dragging ? "border-tr-orange bg-gray-1" : "border-gray-2 bg-white"
+        }`}
       >
         {processing ? (
           <>
-            <Loader2
-              className={`animate-spin text-gray-3 ${hasArtifacts ? "h-4 w-4" : "h-6 w-6"}`}
-              aria-hidden
-            />
+            <Loader2 className="h-6 w-6 animate-spin text-gray-3" aria-hidden />
             <p role="status" className="text-sm text-gray-4">
               Processing file…
             </p>
-          </>
-        ) : hasArtifacts ? (
-          <>
-            <Upload className="h-4 w-4 text-gray-3" aria-hidden />
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="text-sm font-semibold text-graphite underline decoration-gray-3 underline-offset-4 hover:decoration-tr-orange"
-            >
-              Add more
-            </button>
-            <span className="text-[11px] text-gray-3">drag, click, or</span>
-            <button
-              type="button"
-              onClick={handleClipboardButton}
-              className="inline-flex items-center gap-1 text-[11px] text-gray-4 underline decoration-gray-2 underline-offset-2 transition-colors hover:text-tr-orange hover:decoration-tr-orange"
-            >
-              <Clipboard className="h-3 w-3" aria-hidden />
-              paste
-            </button>
-            {pasteHint && (
-              <p role="status" className="w-full text-[11px] leading-relaxed text-tr-red">
-                {pasteHint}
-              </p>
-            )}
           </>
         ) : (
           <>
@@ -420,8 +385,18 @@ export function ArtifactIntake({
         />
       </div>
 
-      {/* Toolbar + artifacts */}
-      {artifacts.length > 0 && (
+      {/* Right: blank state when no images yet */}
+      {artifacts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 border border-dashed border-gray-2 px-4 py-10 text-center">
+          <ImageIcon className="h-6 w-6 text-gray-3" aria-hidden />
+          <p className="text-sm font-medium text-graphite">No designs added yet</p>
+          <p className="max-w-[260px] text-xs leading-relaxed text-gray-4">
+            Uploaded designs will appear here. Add a screen, flow, or mockup on the left to get
+            started.
+          </p>
+        </div>
+      ) : (
+        /* Right: toolbar + artifacts */
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3 text-[11px] font-medium">
             {artifacts.length > 1 && (
@@ -623,6 +598,7 @@ export function ArtifactIntake({
           </p>
         </div>
       )}
+      </div>
 
       {/* Full-screen preview */}
       {previewIndex !== null && artifacts[previewIndex] && (
