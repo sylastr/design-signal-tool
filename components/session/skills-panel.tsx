@@ -99,27 +99,25 @@ export function SkillsPanel({
                 <span className="mt-0.5 block text-xs leading-relaxed text-gray-4">
                   {s.description || "Custom skill."}
                 </span>
-                {s.custom && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDetailsId(s.id)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
                       e.stopPropagation()
                       setDetailsId(s.id)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setDetailsId(s.id)
-                      }
-                    }}
-                    className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
-                  >
-                    <Info className="h-3 w-3" aria-hidden />
-                    Details
-                  </span>
-                )}
+                    }
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
+                >
+                  <Info className="h-3 w-3" aria-hidden />
+                  Details
+                </span>
               </span>
               <span
                 aria-hidden
@@ -253,6 +251,8 @@ interface DetailsProps {
 
 // A modal to view a custom skill's full instructions, edit it, or delete it.
 function SkillDetails({ skill, onClose, onSave, onDelete }: DetailsProps) {
+  // Built-in skills are view-only: no editing and no deleting.
+  const readOnly = !skill.custom
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(skill.name)
   const [description, setDescription] = useState(skill.description ?? "")
@@ -290,7 +290,7 @@ function SkillDetails({ skill, onClose, onSave, onDelete }: DetailsProps) {
         <div className="flex items-start justify-between gap-4 border-b border-gray-2 px-5 py-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4">
-              Custom skill
+              {skill.custom ? "Custom skill" : "Built-in skill"}
             </p>
             <h3 className="mt-1 text-base font-semibold leading-snug text-graphite">
               {editing ? "Edit skill" : skill.name}
@@ -355,7 +355,18 @@ function SkillDetails({ skill, onClose, onSave, onDelete }: DetailsProps) {
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-gray-2 px-5 py-3">
-          {editing ? (
+          {readOnly ? (
+            <>
+              <span />
+              <button
+                type="button"
+                onClick={onClose}
+                className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
+              >
+                Close
+              </button>
+            </>
+          ) : editing ? (
             <>
               <button
                 type="button"
