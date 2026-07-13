@@ -359,6 +359,7 @@ export default function Page() {
                 skills={visibleSkills}
                 onToggle={toggle}
                 onAddCustom={addCustom}
+                onUpdateCustom={updateCustom}
                 onRemoveCustom={removeCustom}
               />
             )}
