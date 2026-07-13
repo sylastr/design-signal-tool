@@ -8,8 +8,15 @@ import { SkillsPanel } from "@/components/session/skills-panel"
 import { StepIndicator, type Step } from "@/components/session/step-indicator"
 import { WizardBar } from "@/components/session/wizard-bar"
 import { SetupDialog } from "@/components/setup/setup-dialog"
+import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog"
 import { ResultView } from "@/components/result/result-view"
-import { useAnalysisPrefs, useDraftContext, useSavedContexts, useSkills } from "@/lib/storage"
+import {
+  useAnalysisPrefs,
+  useDraftContext,
+  useOnboarding,
+  useSavedContexts,
+  useSkills,
+} from "@/lib/storage"
 import type { AnalysisResult, Artifact, Tier } from "@/lib/types"
 
 interface CachedResult {
@@ -55,6 +62,8 @@ export default function Page() {
   const { contexts, add, update, remove, setHidden: setContextHidden } = useSavedContexts()
   const { skills, toggle, addCustom, updateCustom, removeCustom, setHidden: setSkillHidden } =
     useSkills()
+  const { completed: onboardingCompleted, hydrated: onboardingHydrated, complete: completeOnboarding } =
+    useOnboarding()
 
   // Platform-level Setup can hide skills/contexts so they never reach the
   // wizard. The wizard only ever sees the visible ones.
@@ -260,6 +269,13 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-white">
       <Header onOpenSetup={() => openSetup("skills")} />
+
+      <OnboardingDialog
+        open={onboardingHydrated && !onboardingCompleted}
+        onSetSkillHidden={setSkillHidden}
+        onAddContext={(name, text) => add(name, text, "global")}
+        onComplete={completeOnboarding}
+      />
 
       <SetupDialog
         open={setupOpen}

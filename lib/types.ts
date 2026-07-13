@@ -117,4 +117,11 @@ export const DEFAULT_SKILLS: Skill[] = [
     instructions:
       "Frame the critique around the user's job-to-be-done: the progress they are trying to make in a given circumstance. For each observation, ask whether the design advances or obstructs the core job, whether it surfaces the right information at the moment of decision, and whether secondary tasks distract from the primary job. Anchor findings to the supplied project context about target users and their goals; if the job is unclear from context, say so.",
   },
+  {
+    id: "content",
+    name: "Content & Microcopy",
+    active: false,
+    instructions:
+      "Evaluate the interface's language and content design: clarity and scannability of labels, headings, and body copy; consistency of terminology and voice; specific, actionable button and link text (avoid vague 'Submit' or 'Click here'); human error messages that explain cause and recovery; reading level appropriate to the audience; and empty, loading, and success states that guide the user. Flag jargon, ambiguity, and copy that assumes context the user lacks.",
+  },
 ]

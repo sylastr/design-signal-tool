@@ -13,14 +13,17 @@ const CUSTOM_SKILLS_KEY = "design-signal:custom-skills"
 const HIDDEN_SKILLS_KEY = "design-signal:hidden-skills"
 const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
 const ANALYSIS_PREFS_KEY = "design-signal:analysis-prefs"
+const ONBOARDING_KEY = "design-signal:onboarding-complete"
 
-// Every key this app persists. Kept together so a reset wipes everything.
+// Every key this app persists. Kept together so a reset wipes everything
+// (including onboarding, so a reset returns the user to a fresh first-run).
 const ALL_STORAGE_KEYS = [
   CONTEXTS_KEY,
   CUSTOM_SKILLS_KEY,
   HIDDEN_SKILLS_KEY,
   DRAFT_CONTEXT_KEY,
   ANALYSIS_PREFS_KEY,
+  ONBOARDING_KEY,
 ]
 
 /* Wipe all persisted data (skills, contexts, drafts, analysis prefs) and reload
@@ -74,6 +77,26 @@ function writeJSON<T>(key: string, value: T) {
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10)
+}
+
+/* First-run onboarding flag. Starts "completed" until hydrated so the dialog
+   never flashes during SSR/hydration; only shows when we've confirmed the user
+   hasn't finished it yet. Cleared by a full reset. */
+export function useOnboarding() {
+  const [completed, setCompleted] = useState(true)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setCompleted(readJSON<boolean>(ONBOARDING_KEY, false))
+    setHydrated(true)
+  }, [])
+
+  const complete = useCallback(() => {
+    setCompleted(true)
+    writeJSON(ONBOARDING_KEY, true)
+  }, [])
+
+  return { completed, hydrated, complete }
 }
 
 /* The working context draft, persisted so it survives refreshes/returns. */
