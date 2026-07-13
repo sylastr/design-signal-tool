@@ -88,7 +88,11 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
           src={current.dataUrl || "/placeholder.svg"}
           alt={current.name}
           onClick={(e) => e.stopPropagation()}
-          className="max-h-full max-w-full object-contain"
+          onDoubleClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          className="max-h-full max-w-full cursor-zoom-out object-contain"
         />
 
         {hasNext && (

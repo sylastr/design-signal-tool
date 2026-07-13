@@ -685,7 +685,11 @@ export function ResultView({
               src={imageUrl || "/placeholder.svg"}
               alt="Analyzed design artifact, full screen"
               onClick={(e) => e.stopPropagation()}
-              className="max-h-full max-w-full object-contain"
+              onDoubleClick={(e) => {
+                e.stopPropagation()
+                setPreviewOpen(false)
+              }}
+              className="max-h-full max-w-full cursor-zoom-out object-contain"
             />
           </div>
         </div>
