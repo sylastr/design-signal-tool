@@ -50,3 +50,35 @@ body {
 .ds-scroll::-webkit-scrollbar-thumb {
   background-color: var(--gray-3);
 }
+
+/* Onboarding entrance — soft fade so the modal never appears abruptly. */
+@keyframes ds-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ds-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.ds-fade-in {
+  animation: ds-fade-in 0.2s ease-out both;
+}
+.ds-fade-in-up {
+  animation: ds-fade-in-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-fade-in,
+  .ds-fade-in-up {
+    animation: none;
+  }
+}

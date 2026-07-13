@@ -112,7 +112,7 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" role="presentation">
-      <div className="absolute inset-0 bg-graphite/70 backdrop-blur-sm" />
+      <div className="ds-fade-in absolute inset-0 bg-graphite/70 backdrop-blur-sm" />
 
       <div
         ref={dialogRef}
@@ -120,7 +120,7 @@ export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) 
         aria-modal="true"
         aria-labelledby="onboarding-title"
         tabIndex={-1}
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden border border-gray-2 bg-white shadow-2xl outline-none"
+        className="ds-fade-in-up relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden border border-gray-2 bg-white shadow-2xl outline-none"
       >
         {/* Brand hairline echoing the app header */}
         <div className="h-1 w-full shrink-0 bg-tr-orange" />
