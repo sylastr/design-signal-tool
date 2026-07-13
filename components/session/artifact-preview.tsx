@@ -41,26 +41,26 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
       role="dialog"
       aria-modal="true"
       aria-label={`Preview of ${current.name}`}
-      className="fixed inset-0 z-50 flex flex-col bg-graphite/95"
+      className="fixed inset-0 z-50 flex flex-col bg-white/60 backdrop-blur-md"
       onClick={onClose}
     >
       {/* Top bar */}
       <div
-        className="flex items-center justify-between px-4 py-3 text-white"
+        className="flex items-center justify-between px-4 py-3 text-graphite"
         onClick={(e) => e.stopPropagation()}
       >
         <span className="min-w-0 truncate text-sm font-medium" title={current.name}>
           {current.name}
         </span>
         <span className="flex items-center gap-4">
-          <span className="text-xs tabular-nums text-white/60">
+          <span className="text-xs tabular-nums text-graphite/60">
             {index + 1} / {artifacts.length}
           </span>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close preview"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-graphite/70 transition-colors hover:bg-graphite/10 hover:text-graphite"
           >
             <X className="h-5 w-5" aria-hidden />
           </button>
@@ -77,7 +77,7 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
               onIndexChange(index - 1)
             }}
             aria-label="Previous image"
-            className="absolute left-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            className="absolute left-4 flex h-11 w-11 items-center justify-center rounded-full bg-graphite/10 text-graphite transition-colors hover:bg-graphite/20"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden />
           </button>
@@ -99,7 +99,7 @@ export function ArtifactPreview({ artifacts, index, onIndexChange, onClose }: Pr
               onIndexChange(index + 1)
             }}
             aria-label="Next image"
-            className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-full bg-graphite/10 text-graphite transition-colors hover:bg-graphite/20"
           >
             <ChevronRight className="h-6 w-6" aria-hidden />
           </button>
