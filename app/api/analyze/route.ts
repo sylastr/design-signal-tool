@@ -44,6 +44,11 @@ const resultSchema = z.object({
   annotations: z
     .array(annotationSchema)
     .describe("Prioritized critique items, ranked by impact. Return exactly the requested number of items."),
+  feedback_summary: z
+    .string()
+    .describe(
+      "A 2-3 sentence executive synthesis of the review as a whole, so a reader gets the overall assessment without reading each item. Written AFTER the annotations: name the dominant theme(s), how well the design serves the project/product context, and the most consequential thing to address. Ground it in the context and active skills — never generic.",
+    ),
 })
 
 function clampCount(n: unknown) {
@@ -119,7 +124,7 @@ export async function POST(req: Request) {
       ? `\n\n=== ALLOWED SEVERITY TIERS ===\nOnly return annotations whose tier is one of: ${allowedTiers.join(", ")}. Do not use any other tier. If the ${count} highest-impact issues would normally fall outside these tiers, choose the highest-impact issues that DO fit the allowed tiers.`
       : ""
 
-  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.${tierBlock}`
+  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.${tierBlock}\n\n=== FEEDBACK SUMMARY ===\nAfter selecting the annotations, write "feedback_summary": a 2-3 sentence executive synthesis of the review as a whole so a busy reader gets the overall assessment without reading each item. Name the dominant theme(s) across the findings, say how well the design serves the project/product context, and call out the single most consequential thing to address. Ground it in the context and active skills — never generic filler.`
 
   // Order matters: context comes first (primary lens), then the skills that
   // support evaluating the design against it, then the output-size constraint.

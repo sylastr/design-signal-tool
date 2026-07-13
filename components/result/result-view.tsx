@@ -435,10 +435,13 @@ export function ResultView({
         </div>
       )}
 
-      {/* Artifact summary */}
-      <p className="mt-5 border-l-2 border-tr-orange pl-3 text-[15px] leading-relaxed text-graphite">
-        {result.artifact_summary}
-      </p>
+      {/* Assessment summary — quick synthesis so the reader can skip the detail if needed */}
+      <div className="mt-5 border-l-2 border-tr-orange pl-3">
+        <p className="text-xs font-medium text-gray-4">{result.artifact_summary}</p>
+        <p className="mt-1.5 text-[15px] leading-relaxed text-graphite">
+          {result.feedback_summary ?? result.artifact_summary}
+        </p>
+      </div>
 
       {/* Two-column layout */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">

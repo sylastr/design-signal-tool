@@ -43,6 +43,8 @@ export interface Annotation {
 
 export interface AnalysisResult {
   artifact_summary: string
+  /** 2-3 sentence executive synthesis of the whole review, for a quick assessment. */
+  feedback_summary?: string
   annotations: Annotation[]
 }
 
