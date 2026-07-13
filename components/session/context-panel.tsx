@@ -212,7 +212,11 @@ export function ContextPanel({
             onRemove(detailsContext.id)
             setDetailsId(null)
           }}
-          onManageGlobal={onManageGlobal}
+          onManageGlobal={() => {
+            // Dismiss this sub-dialog first so navigating to Settings is a single click.
+            setDetailsId(null)
+            onManageGlobal()
+          }}
         />
       )}
     </section>
