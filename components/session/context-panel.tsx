@@ -170,8 +170,8 @@ export function ContextPanel({
             <FileText className="h-6 w-6 text-gray-3" aria-hidden />
             <p className="text-sm font-medium text-graphite">No saved contexts yet</p>
             <p className="max-w-[220px] text-xs leading-relaxed text-gray-4">
-              Save the context above to reuse it here, or add global contexts in Settings that apply
-              to every review.
+              Your saved contexts for this project will be placed here. You can also add global
+              contexts that applies to any project under the Settings menu.
             </p>
           </div>
         ) : (
