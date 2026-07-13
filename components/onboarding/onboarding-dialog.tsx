@@ -220,9 +220,9 @@ function StepHeading({ title, subtitle }: { title: string; subtitle: string }) {
 
 function WelcomeStep() {
   const steps = [
-    { n: "1", label: "Upload a design", desc: "Screens, flows, or components." },
-    { n: "2", label: "Add context & pick lenses", desc: "Tell the AI who it's for and how to critique." },
-    { n: "3", label: "Get pinpointed feedback", desc: "Tiered from must-fix to nice-to-have, anchored on the artifact." },
+    { n: "1", label: "Upload a design", desc: "You can also drag images directly to the tool or from paste from your clipboard" },
+    { n: "2", label: "Add context & pick skills", desc: "Provide broad context about the project and skills you want the AI to use. This will make the review relevant" },
+    { n: "3", label: "Get pinpointed feedback", desc: "Ranked from must-fix to nice-to-have, anchored on the artifact." },
   ]
   const lenses = [
     { icon: MousePointerClick, label: "Usability" },
