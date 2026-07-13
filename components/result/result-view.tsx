@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Maximize2, X } from "lucide-react"
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, X } from "lucide-react"
 import type { AnalysisResult, AnalysisPrefs, Tier } from "@/lib/types"
 
 interface AnalyzedItem {
@@ -462,20 +462,11 @@ export function ResultView({
         <div className="lg:sticky lg:top-24 lg:self-start">
           <div
             ref={imageBoxRef}
-            className="relative inline-block w-full select-none border border-gray-2 bg-gray-1"
+            onDoubleClick={() => setPreviewOpen(true)}
+            className="relative inline-block w-full cursor-zoom-in select-none border border-gray-2 bg-gray-1"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={imageUrl || "/placeholder.svg"} alt="Analyzed design artifact" className="block w-full" />
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(true)}
-              aria-label="Preview image full screen"
-              title="Preview full screen"
-              className="absolute right-2 top-2 z-10 inline-flex items-center gap-1.5 border border-gray-2 bg-white/90 px-2 py-1 text-[11px] font-medium text-graphite backdrop-blur-sm transition-colors hover:bg-white hover:text-tr-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tr-orange focus-visible:ring-offset-1"
-            >
-              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
-              Preview
-            </button>
             <div className="pointer-events-none absolute inset-0">
               {visibleAnnotations.map((a) => {
                 const meta = TIER_META[a.tier]
@@ -571,7 +562,7 @@ export function ResultView({
           </div>
           <p className="mt-2 text-[11px] text-gray-3">
             AI places markers approximately — drag a circle to move it, or drag the corner handles to resize its
-            region (hold Alt to resize from the center).
+            region (hold Alt to resize from the center). Double-click the image to open full-screen preview.
           </p>
         </div>
 
