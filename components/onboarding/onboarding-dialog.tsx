@@ -366,7 +366,7 @@ function ContextStep() {
       icon: Crosshair,
       label: "Session context",
       tag: "Added per review",
-      desc: "Details specific to the screen you're reviewing right now — what changed, what you want feedback on, or constraints for this flow.",
+      desc: "Details specific to the flows you're reviewing right now — what changed, what you want feedback on, or constraints for this flow.",
       examples: "e.g. \"This is the new checkout step — focus on clarity\"",
     },
   ]
