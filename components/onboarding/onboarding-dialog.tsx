@@ -425,9 +425,9 @@ function DoneStep({ lensCount }: { lensCount: number }) {
         title="You're all set"
         subtitle="Your workspace is configured. Upload a design to get your first review."
       />
-      <ul className="mx-auto mt-7 flex max-w-sm flex-col gap-2.5">
+      <ul className="mx-auto mt-7 flex max-w-sm flex-col gap-3.5">
         {items.map((it) => (
-          <li key={it} className="flex items-center gap-2.5 border border-gray-2 px-4 py-3">
+          <li key={it} className="flex items-center gap-2.5">
             <Check className="h-4 w-4 shrink-0 text-racing-green" aria-hidden />
             <span className="text-sm font-medium text-graphite">{it}</span>
           </li>
