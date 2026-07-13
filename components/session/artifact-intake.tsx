@@ -428,7 +428,8 @@ export function ArtifactIntake({
               </>
             )}
 
-            {/* Cards / list view toggle */}
+            {/* Cards / list view toggle — only worth showing with more than 2 artifacts */}
+            {artifacts.length > 2 && (
             <div
               role="group"
               aria-label="View mode"
@@ -461,6 +462,7 @@ export function ArtifactIntake({
                 <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
+            )}
           </div>
 
           {viewMode === "cards" ? (
