@@ -152,7 +152,11 @@ export function ContextPanel({
 
       {/* Saved contexts — cards */}
       {contexts.length > 0 && (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2.5">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4">
+            Saved Contexts
+          </h3>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {contexts.map((c) => {
             const local = isLocal(c)
             const preview =
@@ -183,6 +187,7 @@ export function ContextPanel({
               </div>
             )
           })}
+          </div>
         </div>
       )}
 
