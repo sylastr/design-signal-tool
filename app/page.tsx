@@ -273,7 +273,6 @@ export default function Page() {
       <OnboardingDialog
         open={onboardingHydrated && !onboardingCompleted}
         onSetSkillHidden={setSkillHidden}
-        onAddContext={(name, text) => add(name, text, "global")}
         onComplete={completeOnboarding}
       />
 

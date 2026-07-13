@@ -5,6 +5,8 @@ import {
   Accessibility,
   ArrowLeft,
   Check,
+  Crosshair,
+  Globe,
   LayoutTemplate,
   MousePointerClick,
   Palette,
@@ -18,8 +20,6 @@ interface Props {
   open: boolean
   /** Set a default skill's platform-level visibility. */
   onSetSkillHidden: (id: string, hidden: boolean) => void
-  /** Persist a first global context entry. */
-  onAddContext: (name: string, text: string) => void
   /** Mark onboarding finished (also used for "skip"). */
   onComplete: () => void
 }
@@ -46,12 +46,10 @@ const ROLES: { id: string; label: string; hint: string; skills: string[] }[] = [
 
 const STEP_COUNT = 5
 
-export function OnboardingDialog({ open, onSetSkillHidden, onAddContext, onComplete }: Props) {
+export function OnboardingDialog({ open, onSetSkillHidden, onComplete }: Props) {
   const [step, setStep] = useState(0)
   const [role, setRole] = useState<string | null>(null)
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
-  const [ctxName, setCtxName] = useState("Product context")
-  const [ctxText, setCtxText] = useState("")
   const dialogRef = useRef<HTMLDivElement>(null)
 
   // Lock body scroll while open and focus the dialog for keyboard users.
@@ -90,9 +88,6 @@ export function OnboardingDialog({ open, onSetSkillHidden, onAddContext, onCompl
       // Feed global settings: keep chosen lenses visible, hide the rest.
       for (const s of DEFAULT_SKILLS) {
         onSetSkillHidden(s.id, !selectedSkills.has(s.id))
-      }
-      if (ctxName.trim() && ctxText.trim()) {
-        onAddContext(ctxName.trim(), ctxText.trim())
       }
     }
     onComplete()
@@ -136,17 +131,8 @@ export function OnboardingDialog({ open, onSetSkillHidden, onAddContext, onCompl
           {step === 0 && <WelcomeStep />}
           {step === 1 && <RoleStep role={role} onPick={pickRole} />}
           {step === 2 && <SkillsStep selected={selectedSkills} onToggle={toggleSkill} />}
-          {step === 3 && (
-            <ContextStep
-              name={ctxName}
-              text={ctxText}
-              onName={setCtxName}
-              onText={setCtxText}
-            />
-          )}
-          {step === 4 && (
-            <DoneStep lensCount={selectedSkills.size} hasContext={ctxText.trim().length > 0} />
-          )}
+          {step === 3 && <ContextStep />}
+          {step === 4 && <DoneStep lensCount={selectedSkills.size} />}
         </div>
 
         {/* Footer: progress + actions */}
@@ -353,54 +339,68 @@ function SkillsStep({
   )
 }
 
-function ContextStep({
-  name,
-  text,
-  onName,
-  onText,
-}: {
-  name: string
-  text: string
-  onName: (v: string) => void
-  onText: (v: string) => void
-}) {
+function ContextStep() {
+  const kinds = [
+    {
+      icon: Globe,
+      label: "Global context",
+      tag: "Set once in Settings",
+      desc: "Stable background about your product, users, and brand. It applies to every review automatically, so the AI always knows who you're designing for.",
+      examples: "e.g. audience, product goals, TR brand guidelines",
+    },
+    {
+      icon: Crosshair,
+      label: "Session context",
+      tag: "Added per review",
+      desc: "Details specific to the screen you're reviewing right now — what changed, what you want feedback on, or constraints for this flow.",
+      examples: "e.g. \"This is the new checkout step — focus on clarity\"",
+    },
+  ]
   return (
     <>
       <StepHeading
-        title="Give the AI context"
-        subtitle="Context turns generic notes into sharp, relevant critique. Add your product, users, and goals once — it applies to every review."
+        title="Two kinds of context"
+        subtitle="Context turns generic notes into sharp, relevant critique. There are two ways to give it — you'll add both later, right where they fit."
       />
       <div className="mt-7 flex flex-col gap-3">
-        <input
-          value={name}
-          onChange={(e) => onName(e.target.value)}
-          placeholder="Name this context"
-          aria-label="Context name"
-          className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
-        />
-        <textarea
-          value={text}
-          onChange={(e) => onText(e.target.value)}
-          rows={5}
-          placeholder="e.g. A legal research tool. Users are attorneys who need to find case law fast; the goal is to reduce time-to-first-result. Must follow TR brand guidelines."
-          aria-label="Context text"
-          className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
-        />
-        <p className="text-xs leading-relaxed text-gray-4">
-          Saved as a <span className="font-semibold text-graphite">global context</span> you can
-          edit anytime in Settings. Optional — skip and add it later, and you can also upload a
-          PDF, TXT, or Word file from the Context step.
-        </p>
+        {kinds.map((k) => {
+          const Icon = k.icon
+          return (
+            <div key={k.label} className="flex items-start gap-3 border border-gray-2 px-4 py-3.5">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center bg-gray-1"
+                aria-hidden
+              >
+                <Icon className="h-5 w-5 text-tr-orange" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm font-semibold text-graphite">{k.label}</p>
+                  <span className="border border-gray-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-4">
+                    {k.tag}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm leading-relaxed text-gray-4">{k.desc}</p>
+                <p className="mt-1.5 text-xs italic leading-relaxed text-gray-3">{k.examples}</p>
+              </div>
+            </div>
+          )
+        })}
       </div>
+      <p className="mt-3 text-xs leading-relaxed text-gray-4">
+        Nothing to fill in here — you can add global context in{" "}
+        <span className="font-semibold text-graphite">Settings</span> and session context on each
+        review.
+      </p>
     </>
   )
 }
 
-function DoneStep({ lensCount, hasContext }: { lensCount: number; hasContext: boolean }) {
+function DoneStep({ lensCount }: { lensCount: number }) {
   const items = [
     `${lensCount} review ${lensCount === 1 ? "lens" : "lenses"} enabled`,
-    hasContext ? "Global context added" : "No context yet — add it anytime",
-    "Manage everything in Settings",
+    "Add global context anytime in Settings",
+    "Add session context on each review",
   ]
   return (
     <>
