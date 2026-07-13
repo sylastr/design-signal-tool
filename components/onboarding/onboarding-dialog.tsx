@@ -236,7 +236,7 @@ function WelcomeStep() {
     <>
       <StepHeading
         title="Welcome to Design Signal"
-        subtitle="Principle-grounded design feedback, on the spot. Here's how a review works."
+        subtitle="Here's how it works"
       />
       <ol className="mt-7 flex flex-col gap-3">
         {steps.map((s) => (
