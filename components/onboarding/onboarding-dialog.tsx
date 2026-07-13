@@ -359,8 +359,8 @@ function ContextStep() {
       icon: Globe,
       label: "Global context",
       tag: "Set once in Settings",
-      desc: "Stable background about your product, users, and brand. It applies to every review automatically, so the AI always knows who you're designing for.",
-      examples: "e.g. audience, product goals, TR brand guidelines",
+      desc: "Permanent insights about your product, users, and goals. It applies to every review automatically, so the AI always knows who you're designing for.",
+      examples: "e.g. audience, product goals, PRDs, design principles",
     },
     {
       icon: Crosshair,
