@@ -329,7 +329,7 @@ export function ArtifactIntake({
           setDragging(false)
           handleFiles(e.dataTransfer.files)
         }}
-        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-10 text-center transition-colors lg:self-start ${
+        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-10 text-center transition-colors lg:max-h-[460px] lg:self-stretch ${
           dragging ? "border-tr-orange bg-gray-1" : "border-gray-2 bg-white"
         }`}
       >
