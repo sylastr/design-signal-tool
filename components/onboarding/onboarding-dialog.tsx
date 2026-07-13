@@ -206,7 +206,7 @@ function StepHeading({ title, subtitle }: { title: string; subtitle: string }) {
 
 function WelcomeStep() {
   const steps = [
-    { n: "1", label: "Upload a design", desc: "You can also drag images directly to the tool or from paste from your clipboard" },
+    { n: "1", label: "Upload a design", desc: "You can also drag images directly to the tool or paste from your clipboard via Ctrl/CMD + V in your keyboard" },
     { n: "2", label: "Add context & pick skills", desc: "Provide broad context about the project and skills you want the AI to use. This will make the review relevant" },
     { n: "3", label: "Get pinpointed feedback", desc: "Ranked from must-fix to nice-to-have, anchored on the artifact." },
   ]
@@ -222,7 +222,7 @@ function WelcomeStep() {
     <>
       <StepHeading
         title="Welcome to Design Signal"
-        subtitle="Here's how it works"
+        subtitle="Make your reviews grounded. Here's how it works"
       />
       <ol className="mt-7 flex flex-col gap-3">
         {steps.map((s) => (
