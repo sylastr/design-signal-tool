@@ -669,11 +669,11 @@ export function ResultView({
           role="dialog"
           aria-modal="true"
           aria-label={`Preview of ${items[currentIndex]?.name ?? "analyzed design"}`}
-          className="fixed inset-0 z-50 flex flex-col bg-graphite/95"
+          className="fixed inset-0 z-50 flex flex-col bg-white/60 backdrop-blur-md"
           onClick={() => setPreviewOpen(false)}
         >
           <div
-            className="flex items-center justify-between px-4 py-3 text-white"
+            className="flex items-center justify-between px-4 py-3 text-graphite"
             onClick={(e) => e.stopPropagation()}
           >
             <span className="min-w-0 truncate text-sm font-medium" title={items[currentIndex]?.name}>
@@ -683,7 +683,7 @@ export function ResultView({
               type="button"
               onClick={() => setPreviewOpen(false)}
               aria-label="Close preview"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center text-graphite/70 transition-colors hover:bg-graphite/10 hover:text-graphite"
             >
               <X className="h-5 w-5" aria-hidden />
             </button>
