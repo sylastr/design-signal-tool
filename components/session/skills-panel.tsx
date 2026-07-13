@@ -91,13 +91,13 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
                 </span>
                 <span
                   aria-hidden
-                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border ${
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center border transition-colors ${
                     s.active
                       ? "border-racing-green bg-racing-green text-white"
-                      : "border-gray-3 bg-white text-transparent"
+                      : "border-gray-3 bg-white"
                   }`}
                 >
-                  <Check className="h-3 w-3" strokeWidth={3} />
+                  {s.active && <Check className="h-3.5 w-3.5" />}
                 </span>
               </span>
               <span className="text-xs leading-relaxed text-gray-4">
