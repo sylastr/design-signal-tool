@@ -208,7 +208,7 @@ function WelcomeStep() {
   const steps = [
     { n: "1", label: "Upload a design", desc: "You can also drag images to the tool or paste them from your clipboard via Ctrl/CMD + V in your keyboard" },
     { n: "2", label: "Add context & pick skills", desc: "Provide broad context about the project and skills you want the AI to use. This will make the review relevant" },
-    { n: "3", label: "Get pinpointed feedback", desc: "Ranked from must-fix to nice-to-have, anchored on the artifact." },
+    { n: "3", label: "Get pinpointed feedback", desc: "Ranked from must-fix to nice-to-have, anchored on our design artifacts." },
   ]
   const lenses = [
     { icon: MousePointerClick, label: "Usability" },
