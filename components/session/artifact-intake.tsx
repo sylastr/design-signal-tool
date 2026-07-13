@@ -472,7 +472,7 @@ export function ArtifactIntake({
                 return (
                   <li key={a.id}>
                     <div
-                      className={`flex flex-col overflow-hidden rounded-lg bg-gray-1 transition-colors ${
+                      className={`flex flex-col overflow-hidden bg-white transition-colors ${
                         isSelected
                           ? "ring-2 ring-tr-orange"
                           : "ring-1 ring-gray-2 hover:ring-gray-3"
@@ -502,7 +502,7 @@ export function ArtifactIntake({
                               ? `Preview artifact ${a.name}`
                               : `Select artifact ${a.name}${isAnalyzed ? " (analyzed)" : ""}`
                           }
-                          className="block aspect-[4/3] w-full overflow-hidden rounded bg-white"
+                          className="block aspect-[4/3] w-full overflow-hidden border border-gray-2 bg-white"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
