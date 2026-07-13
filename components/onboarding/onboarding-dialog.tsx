@@ -376,21 +376,16 @@ function ContextStep() {
         title="Two kinds of context"
         subtitle="Context turns generic notes into sharp, relevant critique. There are two ways to give it — you'll add both later, right where they fit."
       />
-      <div className="mt-7 flex flex-col gap-3">
+      <div className="mt-7 flex flex-col gap-6">
         {kinds.map((k) => {
           const Icon = k.icon
           return (
-            <div key={k.label} className="flex items-start gap-3 border border-gray-2 px-4 py-3.5">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center bg-gray-1"
-                aria-hidden
-              >
-                <Icon className="h-5 w-5 text-tr-orange" />
-              </span>
+            <div key={k.label} className="flex items-start gap-3 pl-4 border-l-2 border-gray-2">
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-tr-orange" aria-hidden />
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <p className="text-sm font-semibold text-graphite">{k.label}</p>
-                  <span className="border border-gray-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-3">
                     {k.tag}
                   </span>
                 </div>
