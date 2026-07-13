@@ -18,8 +18,8 @@ interface Props {
   skills: Skill[]
   contexts: SavedContext[]
   analysisPrefs: AnalysisPrefs
-  onAddSkill: (name: string, instructions: string) => void
-  onUpdateSkill: (id: string, name: string, instructions: string) => void
+  onAddSkill: (name: string, description: string, instructions: string) => void
+  onUpdateSkill: (id: string, name: string, description: string, instructions: string) => void
   onRemoveSkill: (id: string) => void
   onToggleSkillHidden: (id: string, hidden: boolean) => void
   onAddContext: (name: string, text: string) => void

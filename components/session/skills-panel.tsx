@@ -1,32 +1,38 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Loader2, Plus, Upload, X } from "lucide-react"
+import { Check, Loader2, Plus, Upload, X } from "lucide-react"
 import type { Skill } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 
 interface Props {
   skills: Skill[]
   onToggle: (id: string) => void
-  onAddCustom: (name: string, instructions: string) => void
+  onAddCustom: (name: string, description: string, instructions: string) => void
   onRemoveCustom: (id: string) => void
 }
 
 export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: Props) {
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const [instructions, setInstructions] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
 
-  const submit = () => {
-    if (!name.trim() || !instructions.trim()) return
-    onAddCustom(name.trim(), instructions.trim())
+  const resetForm = () => {
     setName("")
+    setDescription("")
     setInstructions("")
     setImportError(null)
     setAdding(false)
+  }
+
+  const submit = () => {
+    if (!name.trim() || !instructions.trim()) return
+    onAddCustom(name.trim(), description.trim(), instructions.trim())
+    resetForm()
   }
 
   // Extract text from uploaded files and append it to the skill instructions.
@@ -62,42 +68,60 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
         Analysis skills
       </h2>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {skills.map((s) => (
-          <span key={s.id} className="relative inline-flex">
+          <div key={s.id} className="relative">
             <button
               type="button"
               onClick={() => onToggle(s.id)}
               aria-pressed={s.active}
-              title={s.instructions}
-              className={`inline-flex items-center border px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex h-full w-full flex-col items-start gap-1 border p-3 text-left transition-colors ${
                 s.active
-                  ? "border-racing-green bg-racing-green text-white"
-                  : "border-gray-2 bg-white text-graphite hover:border-gray-3"
-              } ${s.custom ? "pr-7" : ""}`}
+                  ? "border-racing-green bg-racing-green/5"
+                  : "border-gray-2 bg-white hover:border-gray-3"
+              }`}
             >
-              {s.name}
+              <span className="flex w-full items-start justify-between gap-2">
+                <span
+                  className={`text-sm font-semibold leading-snug ${
+                    s.active ? "text-racing-green" : "text-graphite"
+                  } ${s.custom ? "pr-5" : ""}`}
+                >
+                  {s.name}
+                </span>
+                <span
+                  aria-hidden
+                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border ${
+                    s.active
+                      ? "border-racing-green bg-racing-green text-white"
+                      : "border-gray-3 bg-white text-transparent"
+                  }`}
+                >
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
+              </span>
+              <span className="text-xs leading-relaxed text-gray-4">
+                {s.description || "Custom skill."}
+              </span>
             </button>
             {s.custom && (
               <button
                 type="button"
                 onClick={() => onRemoveCustom(s.id)}
                 aria-label={`Delete skill ${s.name}`}
-                className={`absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center ${
-                  s.active ? "text-white/80 hover:text-white" : "text-gray-3 hover:text-tr-red"
-                }`}
+                className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center text-gray-3 transition-colors hover:text-tr-red"
               >
                 <X className="h-3.5 w-3.5" aria-hidden />
               </button>
             )}
-          </span>
+          </div>
         ))}
 
         {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="inline-flex items-center gap-1 border border-dashed border-gray-3 bg-white px-3 py-1.5 text-sm font-medium text-gray-4 transition-colors hover:border-tr-orange hover:text-tr-orange"
+            className="flex min-h-[76px] flex-col items-center justify-center gap-1 border border-dashed border-gray-3 bg-white p-3 text-sm font-medium text-gray-4 transition-colors hover:border-tr-orange hover:text-tr-orange"
           >
             <Plus className="h-4 w-4" aria-hidden />
             Custom skill
@@ -113,6 +137,14 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
             onChange={(e) => setName(e.target.value)}
             placeholder="Skill name"
             aria-label="Custom skill name"
+            className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Short description — one line shown on the skill card"
+            aria-label="Custom skill description"
             className="border border-gray-2 bg-white px-3 py-2 text-sm text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
           />
           <textarea
@@ -160,12 +192,7 @@ export function SkillsPanel({ skills, onToggle, onAddCustom, onRemoveCustom }: P
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => {
-                setAdding(false)
-                setName("")
-                setInstructions("")
-                setImportError(null)
-              }}
+              onClick={resetForm}
               className="border border-gray-2 bg-white px-3 py-1.5 text-xs font-semibold text-gray-4 hover:border-gray-3"
             >
               Cancel

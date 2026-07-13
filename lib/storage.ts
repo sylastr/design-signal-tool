@@ -244,11 +244,11 @@ export function useSkills() {
   }, [])
 
   const addCustom = useCallback(
-    (name: string, instructions: string) => {
+    (name: string, description: string, instructions: string) => {
       setSkills((prev) => {
         const next = [
           ...prev,
-          { id: uid(), name, instructions, active: true, custom: true },
+          { id: uid(), name, description, instructions, active: true, custom: true },
         ]
         persistCustom(next)
         return next
@@ -258,10 +258,10 @@ export function useSkills() {
   )
 
   const updateCustom = useCallback(
-    (id: string, name: string, instructions: string) => {
+    (id: string, name: string, description: string, instructions: string) => {
       setSkills((prev) => {
         const next = prev.map((s) =>
-          s.id === id && s.custom ? { ...s, name, instructions } : s,
+          s.id === id && s.custom ? { ...s, name, description, instructions } : s,
         )
         persistCustom(next)
         return next

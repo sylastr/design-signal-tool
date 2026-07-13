@@ -55,6 +55,8 @@ export interface Artifact {
 export interface Skill {
   id: string
   name: string
+  /** One-line summary of what the lens evaluates, shown on selection cards. */
+  description?: string
   instructions: string
   /** Selected for the current analysis run (per-session, chosen in the wizard). */
   active: boolean
@@ -85,6 +87,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "heuristic",
     name: "Heuristic Usability",
+    description: "Checks the design against Nielsen's 10 usability heuristics.",
     active: false,
     instructions:
       "Evaluate against Nielsen's 10 usability heuristics: (1) Visibility of system status, (2) Match between system and the real world, (3) User control and freedom, (4) Consistency and standards, (5) Error prevention, (6) Recognition rather than recall, (7) Flexibility and efficiency of use, (8) Aesthetic and minimalist design, (9) Help users recognize, diagnose, and recover from errors, (10) Help and documentation. Name the specific heuristic each observation violates or upholds.",
@@ -92,6 +95,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "a11y",
     name: "Accessibility (WCAG 2.1 AA)",
+    description: "Audits contrast, focus, target size, and WCAG 2.1 AA criteria.",
     active: false,
     instructions:
       "Audit against WCAG 2.1 AA. Check color contrast (4.5:1 for normal text, 3:1 for large text and UI components), visible focus indicators, target size (min 24x24px), text alternatives for non-text content, information not conveyed by color alone, logical heading/reading order, and form labels. Cite the specific success criterion (e.g. 1.4.3 Contrast, 2.4.7 Focus Visible, 1.4.1 Use of Color) for each finding.",
@@ -99,6 +103,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "hierarchy",
     name: "Visual Hierarchy & Layout",
+    description: "Assesses Gestalt grouping, typographic scale, and scanning order.",
     active: false,
     instructions:
       "Assess visual hierarchy and layout using Gestalt principles (proximity, similarity, common region, continuity, figure/ground) and typographic scale. Evaluate whether the primary action is the most salient element, whether grouping reflects real relationships, whether alignment and spacing follow a consistent grid, and whether contrast and size guide the eye in priority order. Flag competing focal points and weak scanning paths.",
@@ -106,6 +111,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "tr-brand",
     name: "TR Brand & Design System",
+    description: "Enforces TR brand color, hairline borders, and design-system norms.",
     active: false,
     instructions:
       "Judge conformance to Thomson Reuters brand and design-system norms. TR Orange (#D64000) is the sole accent and must be reserved for primary actions and small brand markers — never a dominant fill. Racing Green (#123015) anchors dark/active UI. Enforce hairline borders over shadows, no gradients, a strict grid, and restrained use of color. Flag off-brand accents, decorative gradients, inconsistent component styling, and misuse of the accent color.",
@@ -113,6 +119,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "jtbd",
     name: "Jobs-to-be-Done",
+    description: "Frames critique around the user's core job and moment of decision.",
     active: false,
     instructions:
       "Frame the critique around the user's job-to-be-done: the progress they are trying to make in a given circumstance. For each observation, ask whether the design advances or obstructs the core job, whether it surfaces the right information at the moment of decision, and whether secondary tasks distract from the primary job. Anchor findings to the supplied project context about target users and their goals; if the job is unclear from context, say so.",
@@ -120,6 +127,7 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "content",
     name: "Content & Microcopy",
+    description: "Evaluates clarity, voice, labels, and error/empty-state copy.",
     active: false,
     instructions:
       "Evaluate the interface's language and content design: clarity and scannability of labels, headings, and body copy; consistency of terminology and voice; specific, actionable button and link text (avoid vague 'Submit' or 'Click here'); human error messages that explain cause and recovery; reading level appropriate to the audience; and empty, loading, and success states that guide the user. Flag jargon, ambiguity, and copy that assumes context the user lacks.",
