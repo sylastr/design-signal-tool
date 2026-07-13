@@ -71,11 +71,15 @@ Anchor each item to a specific location in the artifact. Tier each item must-fix
 
 For each item, provide a normalized location (x, y as the CENTER point, plus w, h for a bounding box, all in the range 0-1 relative to the image). Use a small w/h (around 0.02) when the issue is a single point; use a larger box when the issue spans a region.`
 
+type Tier = "must-fix" | "should-consider" | "nice-to-have"
+const ALL_TIERS: Tier[] = ["must-fix", "should-consider", "nice-to-have"]
+
 interface AnalyzeBody {
   imageBase64?: string
   context?: string
   activeSkills?: { name: string; instructions: string }[]
   count?: number
+  allowedTiers?: Tier[]
 }
 
 export async function POST(req: Request) {
@@ -88,6 +92,12 @@ export async function POST(req: Request) {
 
   const { imageBase64, context, activeSkills = [] } = body
   const count = clampCount(body.count)
+  // Restrict to the tiers enabled in Settings → Analysis; fall back to all
+  // tiers if none were provided or the list was empty/invalid.
+  const requestedTiers = Array.isArray(body.allowedTiers)
+    ? body.allowedTiers.filter((t): t is Tier => ALL_TIERS.includes(t))
+    : []
+  const allowedTiers = requestedTiers.length > 0 ? requestedTiers : ALL_TIERS
 
   if (!imageBase64) {
     return Response.json({ error: "No artifact image provided." }, { status: 400 })
@@ -104,7 +114,12 @@ export async function POST(req: Request) {
     ? `This is the primary lens for the review. Evaluate the design against it first, and mine it for findings (unmet user needs, decisions from product/engineering calls, research insights, stated goals). Ground context-driven observations by citing the relevant point in the "rationale" field.\n\n${context.trim()}`
     : `No project context was supplied. Open the review by briefly noting that, without research or product/engineering context, this is a heuristics-only pass and some judgments can't be fully grounded. Then still deliver best-effort, skill-based feedback so the review is never empty — never refuse or return fewer items than requested.`
 
-  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.`
+  const tierBlock =
+    allowedTiers.length < ALL_TIERS.length
+      ? `\n\n=== ALLOWED SEVERITY TIERS ===\nOnly return annotations whose tier is one of: ${allowedTiers.join(", ")}. Do not use any other tier. If the ${count} highest-impact issues would normally fall outside these tiers, choose the highest-impact issues that DO fit the allowed tiers.`
+      : ""
+
+  const countBlock = `=== OUTPUT SIZE ===\nReturn EXACTLY ${count} annotation${count === 1 ? "" : "s"} — the ${count} highest-impact issue${count === 1 ? "" : "s"}, ranked by impact. Do not return more or fewer.${tierBlock}`
 
   // Order matters: context comes first (primary lens), then the skills that
   // support evaluating the design against it, then the output-size constraint.
@@ -147,9 +162,14 @@ export async function POST(req: Request) {
       ],
     })
 
-    // Enforce the requested count as a hard cap, then ensure numbers are
-    // sequential/stable and locations are safely in 0-1 for the UI.
-    const annotations = object.annotations.slice(0, count).map((a, i) => ({
+    // Drop any tiers the model returned that aren't allowed, then enforce the
+    // requested count as a hard cap, and ensure numbers are sequential/stable
+    // and locations are safely in 0-1 for the UI.
+    const allowedSet = new Set<Tier>(allowedTiers)
+    const annotations = object.annotations
+      .filter((a) => allowedSet.has(a.tier as Tier))
+      .slice(0, count)
+      .map((a, i) => ({
       ...a,
       number: i + 1,
       location: {

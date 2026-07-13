@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Eye, Loader2, Pencil, Trash2, Upload } from "lucide-react"
+import { Eye, Loader2, Lock, Pencil, SlidersHorizontal, Trash2, Upload } from "lucide-react"
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { InfoTooltip } from "@/components/session/info-tooltip"
@@ -13,7 +13,12 @@ interface Props {
   onSave: (name: string, text: string) => void
   onUpdate: (id: string, name: string, text: string) => void
   onRemove: (id: string) => void
+  /** Open Settings → Contexts to manage global entries. */
+  onManageGlobal: () => void
 }
+
+// Global entries are managed in Settings; only "local" entries are editable here.
+const isLocal = (c: SavedContext) => c.scope === "local"
 
 export function ContextPanel({
   contextText,
@@ -22,6 +27,7 @@ export function ContextPanel({
   onSave,
   onUpdate,
   onRemove,
+  onManageGlobal,
 }: Props) {
   const [name, setName] = useState("")
   const [previewId, setPreviewId] = useState<string | null>(null)
@@ -93,7 +99,7 @@ export function ContextPanel({
         onChange={(e) => onContextChange(e.target.value)}
         rows={6}
         aria-label="Project and product context"
-        placeholder="e.g. Target users are legal researchers; goal is to reduce time-to-first-result; must follow TR brand guidelines..."
+        placeholder="e.g. Target users are busy Tax professionals who want save time during tax season by reducing redudant tasks; main goal is to focus in reviewing tax returns instead of wasting time entering data; must follow TR brand guidelines..."
         className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none placeholder:text-gray-3 focus:border-racing-green"
       />
 
@@ -158,17 +164,30 @@ export function ContextPanel({
           {contexts.map((c) => {
             const isPreview = previewId === c.id
             const isEdit = editId === c.id
+            const local = isLocal(c)
             return (
               <li key={c.id} className="flex flex-col">
                 <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                  <button
-                    type="button"
-                    onClick={() => onContextChange(c.text)}
-                    className="truncate text-left text-sm font-medium text-graphite hover:text-tr-orange"
-                    title="Load into editor"
-                  >
-                    {c.name}
-                  </button>
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        local
+                          ? onContextChange(c.text)
+                          : setPreviewId(isPreview ? null : c.id)
+                      }
+                      className="truncate text-left text-sm font-medium text-graphite hover:text-tr-orange"
+                      title={local ? "Load into editor" : "Preview"}
+                    >
+                      {c.name}
+                    </button>
+                    {!local && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-3">
+                        <Lock className="h-3 w-3" aria-hidden />
+                        Global — manage in Settings
+                      </span>
+                    )}
+                  </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <IconBtn
                       label="Preview"
@@ -180,16 +199,24 @@ export function ContextPanel({
                     >
                       <Eye className="h-4 w-4" aria-hidden />
                     </IconBtn>
-                    <IconBtn
-                      label="Edit"
-                      onClick={() => (isEdit ? setEditId(null) : startEdit(c))}
-                      active={isEdit}
-                    >
-                      <Pencil className="h-4 w-4" aria-hidden />
-                    </IconBtn>
-                    <IconBtn label="Delete" onClick={() => onRemove(c.id)} danger>
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                    </IconBtn>
+                    {local ? (
+                      <>
+                        <IconBtn
+                          label="Edit"
+                          onClick={() => (isEdit ? setEditId(null) : startEdit(c))}
+                          active={isEdit}
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </IconBtn>
+                        <IconBtn label="Delete" onClick={() => onRemove(c.id)} danger>
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </IconBtn>
+                      </>
+                    ) : (
+                      <IconBtn label="Manage in Settings" onClick={onManageGlobal}>
+                        <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                      </IconBtn>
+                    )}
                   </div>
                 </div>
 
@@ -207,16 +234,27 @@ export function ContextPanel({
                       >
                         Close
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onContextChange(c.text)
-                          setPreviewId(null)
-                        }}
-                        className="border border-racing-green bg-white px-3 py-1.5 text-xs font-semibold text-racing-green hover:bg-racing-green hover:text-white"
-                      >
-                        Load into editor
-                      </button>
+                      {local ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onContextChange(c.text)
+                            setPreviewId(null)
+                          }}
+                          className="border border-racing-green bg-white px-3 py-1.5 text-xs font-semibold text-racing-green hover:bg-racing-green hover:text-white"
+                        >
+                          Load into editor
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={onManageGlobal}
+                          className="inline-flex items-center gap-1.5 border border-racing-green bg-white px-3 py-1.5 text-xs font-semibold text-racing-green hover:bg-racing-green hover:text-white"
+                        >
+                          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+                          Manage in Settings
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

@@ -1,5 +1,36 @@
 export type Tier = "must-fix" | "should-consider" | "nice-to-have"
 
+/** The three text paragraphs that make up a single suggestion card. */
+export type SectionKey = "observation" | "rationale" | "suggested_action"
+
+/** Platform-level analysis preferences configured in Settings → Analysis. */
+export interface AnalysisPrefs {
+  /** Which severity tiers are included in results. */
+  tiers: Record<Tier, boolean>
+  /** Which paragraphs render on each suggestion card. */
+  sections: Record<SectionKey, boolean>
+  /** Max number of suggestions the AI can return (1-7). */
+  maxSuggestions: number
+}
+
+/** Display order + labels for the tier toggles. */
+export const TIER_ORDER: { key: Tier; label: string }[] = [
+  { key: "must-fix", label: "Must-fix" },
+  { key: "should-consider", label: "Should-consider" },
+  { key: "nice-to-have", label: "Nice-to-have" },
+]
+
+/** Display order + labels/descriptions for the paragraph toggles. */
+export const SECTION_ORDER: { key: SectionKey; label: string; description: string }[] = [
+  { key: "observation", label: "Observation", description: "The headline finding — what was observed." },
+  { key: "rationale", label: "Rationale", description: "The reasoning and context grounding the finding." },
+  {
+    key: "suggested_action",
+    label: "Suggested action",
+    description: "The concrete next step to take.",
+  },
+]
+
 export interface Annotation {
   number: number
   location: { x: number; y: number; w: number; h: number } // 0-1 normalized; x,y = center
@@ -25,14 +56,25 @@ export interface Skill {
   id: string
   name: string
   instructions: string
+  /** Selected for the current analysis run (per-session, chosen in the wizard). */
   active: boolean
   custom?: boolean
+  /** Hidden from the wizard at a platform level via Setup. Distinct from active. */
+  hidden?: boolean
 }
 
 export interface SavedContext {
   id: string
   name: string
   text: string
+  /** Hidden from the wizard at a platform level via Setup. */
+  hidden?: boolean
+  /**
+   * Where the entry is managed. "global" entries are created/edited in
+   * Settings and are read-only in the wizard; "local" entries are created in
+   * the wizard and fully editable there. Missing = global (legacy entries).
+   */
+  scope?: "global" | "local"
 }
 
 /* Real, opinionated instruction blocks — these are composed into the system prompt.
@@ -74,5 +116,12 @@ export const DEFAULT_SKILLS: Skill[] = [
     active: false,
     instructions:
       "Frame the critique around the user's job-to-be-done: the progress they are trying to make in a given circumstance. For each observation, ask whether the design advances or obstructs the core job, whether it surfaces the right information at the moment of decision, and whether secondary tasks distract from the primary job. Anchor findings to the supplied project context about target users and their goals; if the job is unclear from context, say so.",
+  },
+  {
+    id: "content",
+    name: "Content & Microcopy",
+    active: false,
+    instructions:
+      "Evaluate the interface's language and content design: clarity and scannability of labels, headings, and body copy; consistency of terminology and voice; specific, actionable button and link text (avoid vague 'Submit' or 'Click here'); human error messages that explain cause and recovery; reading level appropriate to the audience; and empty, loading, and success states that guide the user. Flag jargon, ambiguity, and copy that assumes context the user lacks.",
   },
 ]

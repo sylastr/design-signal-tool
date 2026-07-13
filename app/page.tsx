@@ -7,9 +7,17 @@ import { ContextPanel } from "@/components/session/context-panel"
 import { SkillsPanel } from "@/components/session/skills-panel"
 import { StepIndicator, type Step } from "@/components/session/step-indicator"
 import { WizardBar } from "@/components/session/wizard-bar"
+import { SetupDialog } from "@/components/setup/setup-dialog"
+import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog"
 import { ResultView } from "@/components/result/result-view"
-import { useDraftContext, useSavedContexts, useSkills, useSuggestionCount } from "@/lib/storage"
-import type { AnalysisResult, Artifact } from "@/lib/types"
+import {
+  useAnalysisPrefs,
+  useDraftContext,
+  useOnboarding,
+  useSavedContexts,
+  useSkills,
+} from "@/lib/storage"
+import type { AnalysisResult, Artifact, Tier } from "@/lib/types"
 
 interface CachedResult {
   result: AnalysisResult
@@ -41,26 +49,47 @@ export default function Page() {
   const [lastViewedId, setLastViewedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [setupOpen, setSetupOpen] = useState(false)
+  const [setupTab, setSetupTab] = useState<"skills" | "contexts" | "analysis" | "reset">("skills")
+
+  const openSetup = (tab: "skills" | "contexts" | "analysis" | "reset" = "skills") => {
+    setSetupTab(tab)
+    setSetupOpen(true)
+  }
+
   const [contextText, setContextText] = useDraftContext()
-  const [suggestionCount, setSuggestionCount] = useSuggestionCount()
-  const { contexts, add, update, remove } = useSavedContexts()
-  const { skills, toggle, addCustom, removeCustom } = useSkills()
+  const { prefs, setTier, setSection, setMaxSuggestions } = useAnalysisPrefs()
+  const { contexts, add, update, remove, setHidden: setContextHidden } = useSavedContexts()
+  const { skills, toggle, addCustom, updateCustom, removeCustom, setHidden: setSkillHidden } =
+    useSkills()
+  const { completed: onboardingCompleted, hydrated: onboardingHydrated, complete: completeOnboarding } =
+    useOnboarding()
 
-  const activeSkills = useMemo(() => skills.filter((s) => s.active), [skills])
+  // Platform-level Setup can hide skills/contexts so they never reach the
+  // wizard. The wizard only ever sees the visible ones.
+  const visibleSkills = useMemo(() => skills.filter((s) => !s.hidden), [skills])
+  const visibleContexts = useMemo(() => contexts.filter((c) => !c.hidden), [contexts])
 
-  // The context sent to analysis: every saved entry (labeled by name) plus any
-  // unsaved text still in the editor. Saving clears the box, so saved entries
-  // are the durable source of context and the box is just an input for adding
-  // the next one.
+  // Active = selected in the wizard AND still visible (a skill hidden in Setup
+  // is never used, even if it was active before being hidden).
+  const activeSkills = useMemo(
+    () => skills.filter((s) => s.active && !s.hidden),
+    [skills],
+  )
+
+  // The context sent to analysis: every visible saved entry (labeled by name)
+  // plus any unsaved text still in the editor. Saving clears the box, so saved
+  // entries are the durable source of context and the box is just an input for
+  // adding the next one.
   const composedContext = useMemo(() => {
     const parts: string[] = []
-    for (const c of contexts) {
+    for (const c of visibleContexts) {
       if (c.text.trim()) parts.push(`## ${c.name}\n${c.text.trim()}`)
     }
     const draft = contextText.trim()
     if (draft) parts.push(draft)
     return parts.join("\n\n")
-  }, [contexts, contextText])
+  }, [visibleContexts, contextText])
 
   const handleAdd = (next: Artifact[]) => {
     setArtifacts((prev) => [...prev, ...next])
@@ -100,7 +129,8 @@ export default function Page() {
             imageBase64: target.dataUrl,
             context: composedContext,
             activeSkills: activeSkills.map((s) => ({ name: s.name, instructions: s.instructions })),
-            count: suggestionCount,
+            count: prefs.maxSuggestions,
+            allowedTiers: (Object.keys(prefs.tiers) as Tier[]).filter((t) => prefs.tiers[t]),
           }),
         })
         if (!res.ok) {
@@ -197,7 +227,7 @@ export default function Page() {
   // Step gating — strictly forward. Each gate must be satisfied to advance.
   // Context is ready once there's at least one saved entry, or enough unsaved
   // text in the editor to stand on its own.
-  const contextReady = contexts.length > 0 || contextText.trim().length >= MIN_CONTEXT
+  const contextReady = visibleContexts.length > 0 || contextText.trim().length >= MIN_CONTEXT
   const gates = [artifacts.length > 0, contextReady, activeSkills.length > 0 && artifacts.length > 0]
   const canAdvance = gates[step]
 
@@ -211,7 +241,7 @@ export default function Page() {
       if (!contextReady) {
         return "Describe the project and its users to continue (a sentence or two)"
       }
-      const saved = contexts.length
+      const saved = visibleContexts.length
       if (saved > 0) {
         const unsaved = contextText.trim().length > 0
         return `${saved} context ${saved === 1 ? "entry" : "entries"} added${
@@ -223,7 +253,7 @@ export default function Page() {
     return activeSkills.length > 0
       ? `${activeSkills.length} ${activeSkills.length === 1 ? "skill" : "skills"} selected`
       : "Pick at least one analysis skill to continue"
-  }, [step, artifacts.length, contextReady, contexts.length, contextText, activeSkills.length])
+  }, [step, artifacts.length, contextReady, visibleContexts.length, contextText, activeSkills.length])
 
   const goNext = () => {
     if (canAdvance) setStep((s) => Math.min(s + 1, STEPS.length - 1))
@@ -238,7 +268,33 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
+      <Header onOpenSetup={() => openSetup("skills")} />
+
+      <OnboardingDialog
+        open={onboardingHydrated && !onboardingCompleted}
+        onSetSkillHidden={setSkillHidden}
+        onComplete={completeOnboarding}
+      />
+
+      <SetupDialog
+        open={setupOpen}
+        onClose={() => setSetupOpen(false)}
+        initialTab={setupTab}
+        skills={skills}
+        contexts={contexts}
+        analysisPrefs={prefs}
+        onAddSkill={addCustom}
+        onUpdateSkill={updateCustom}
+        onRemoveSkill={removeCustom}
+        onToggleSkillHidden={setSkillHidden}
+        onAddContext={add}
+        onUpdateContext={update}
+        onRemoveContext={remove}
+        onToggleContextHidden={setContextHidden}
+        onToggleTier={setTier}
+        onToggleSection={setSection}
+        onMaxSuggestionsChange={setMaxSuggestions}
+      />
 
       {showResult && viewingId ? (
         <main>
@@ -247,6 +303,8 @@ export default function Page() {
             imageUrl={viewing.imageUrl}
             items={analyzedItems}
             currentId={viewingId}
+            enabledTiers={prefs.tiers}
+            sections={prefs.sections}
             onNavigate={setViewingId}
             onBack={() => setViewingId(null)}
             onMoveAnnotation={(num, x, y) => handleMoveAnnotation(viewingId, num, x, y)}
@@ -280,17 +338,18 @@ export default function Page() {
               <ContextPanel
                 contextText={contextText}
                 onContextChange={setContextText}
-                contexts={contexts}
-                onSave={add}
+                contexts={visibleContexts}
+                onSave={(name, text) => add(name, text, "local")}
                 onUpdate={update}
                 onRemove={remove}
+                onManageGlobal={() => openSetup("contexts")}
               />
             )}
 
             {/* Step 3 — Skill */}
             {step === 2 && (
               <SkillsPanel
-                skills={skills}
+                skills={visibleSkills}
                 onToggle={toggle}
                 onAddCustom={addCustom}
                 onRemoveCustom={removeCustom}
@@ -313,8 +372,8 @@ export default function Page() {
             canAdvance={canAdvance}
             gateHint={gateHint}
             analyzing={analyzing}
-            suggestionCount={suggestionCount}
-            onSuggestionCountChange={setSuggestionCount}
+            suggestionCount={prefs.maxSuggestions}
+            onSuggestionCountChange={setMaxSuggestions}
             onBack={goBack}
             onNext={goNext}
             onAnalyze={handleAnalyze}
