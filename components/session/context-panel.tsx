@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Info, Loader2, Lock, SlidersHorizontal, Trash2, Upload, X } from "lucide-react"
+import { FileText, Info, Loader2, Lock, SlidersHorizontal, Trash2, Upload, X } from "lucide-react"
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { InfoTooltip } from "@/components/session/info-tooltip"
@@ -33,6 +33,9 @@ export function ContextPanel({
   // The saved context whose details modal is open.
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const detailsContext = detailsId ? contexts.find((c) => c.id === detailsId) ?? null : null
+  // Split so global (Settings-managed) contexts are grouped and easy to identify.
+  const globalContexts = contexts.filter((c) => !isLocal(c))
+  const localContexts = contexts.filter((c) => isLocal(c))
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
@@ -156,46 +159,49 @@ export function ContextPanel({
       </div>
       </div>
 
-      {/* Right: saved contexts sidebar */}
-      {contexts.length > 0 && (
-        <aside className="flex min-w-0 flex-col gap-2.5 lg:border-l lg:border-gray-2 lg:pl-8">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4">
-            Saved Contexts
-          </h3>
-          <div className="ds-scroll flex flex-col gap-2.5 lg:max-h-[360px] lg:overflow-y-auto lg:pr-1">
-            {contexts.map((c) => {
-              const local = isLocal(c)
-              const preview =
-                c.text.length > 150 ? `${c.text.slice(0, 150).trimEnd()}…` : c.text
-              return (
-                <div
-                  key={c.id}
-                  className="flex flex-col border border-gray-2 bg-white p-3"
-                >
-                  <p className="text-sm font-semibold leading-snug text-graphite">{c.name}</p>
-                  {!local && (
-                    <span className="mt-1 inline-flex w-fit items-center gap-1 text-[11px] font-medium text-gray-3">
-                      <Lock className="h-3 w-3" aria-hidden />
-                      Global
-                    </span>
-                  )}
-                  <p className="mt-1 text-xs leading-relaxed text-gray-4">
-                    {preview || "No text yet."}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setDetailsId(c.id)}
-                    className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
-                  >
-                    <Info className="h-3 w-3" aria-hidden />
-                    Details
-                  </button>
-                </div>
-              )
-            })}
+      {/* Right: saved contexts sidebar (always shown to balance the layout) */}
+      <aside className="flex min-w-0 flex-col gap-2.5 lg:border-l lg:border-gray-2 lg:pl-8">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4">
+          Saved Contexts
+        </h3>
+
+        {contexts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 border border-dashed border-gray-3 px-4 py-10 text-center">
+            <FileText className="h-6 w-6 text-gray-3" aria-hidden />
+            <p className="text-sm font-medium text-graphite">No saved contexts yet</p>
+            <p className="max-w-[220px] text-xs leading-relaxed text-gray-4">
+              Save the context above to reuse it here, or add global contexts in Settings that apply
+              to every review.
+            </p>
           </div>
-        </aside>
-      )}
+        ) : (
+          <div className="ds-scroll flex flex-col gap-4 lg:max-h-[360px] lg:overflow-y-auto lg:pr-1">
+            {globalContexts.length > 0 && (
+              <div className="flex flex-col gap-2.5">
+                <p className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.1em] text-gray-3">
+                  <Lock className="h-3 w-3" aria-hidden />
+                  Global — applies to every review
+                </p>
+                {globalContexts.map((c) => (
+                  <ContextCard key={c.id} context={c} onDetails={() => setDetailsId(c.id)} />
+                ))}
+              </div>
+            )}
+            {localContexts.length > 0 && (
+              <div className="flex flex-col gap-2.5">
+                {globalContexts.length > 0 && (
+                  <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-gray-3">
+                    This review
+                  </p>
+                )}
+                {localContexts.map((c) => (
+                  <ContextCard key={c.id} context={c} onDetails={() => setDetailsId(c.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
 
       {detailsContext && (
         <ContextDetails
@@ -210,6 +216,40 @@ export function ContextPanel({
         />
       )}
     </section>
+  )
+}
+
+// A compact saved-context card. Global entries get a tinted background + lock badge
+// so they are visually distinct from this review's own contexts.
+function ContextCard({ context, onDetails }: { context: SavedContext; onDetails: () => void }) {
+  const global = !isLocal(context)
+  const preview =
+    context.text.length > 150 ? `${context.text.slice(0, 150).trimEnd()}…` : context.text
+  return (
+    <div
+      className={`flex flex-col border p-3 ${
+        global ? "border-gray-2 bg-gray-1" : "border-gray-2 bg-white"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold leading-snug text-graphite">{context.name}</p>
+        {global && (
+          <span className="inline-flex shrink-0 items-center gap-1 border border-gray-3 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-4">
+            <Lock className="h-2.5 w-2.5" aria-hidden />
+            Global
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-gray-4">{preview || "No text yet."}</p>
+      <button
+        type="button"
+        onClick={onDetails}
+        className="mt-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-racing-green transition-colors hover:text-racing-green-light"
+      >
+        <Info className="h-3 w-3" aria-hidden />
+        Details
+      </button>
+    </div>
   )
 }
 
