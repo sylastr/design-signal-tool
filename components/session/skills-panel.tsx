@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Check, Info, Loader2, Plus, Trash2, Upload, X } from "lucide-react"
 import type { Skill } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
+// Renders saved skill instructions as formatted Markdown when opened for reading.
 import { Markdown } from "@/components/markdown"
 
 interface Props {
