@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import { Check, Info, Loader2, Plus, Trash2, Upload, X } from "lucide-react"
 import type { Skill } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
+// Renders saved skill instructions as formatted Markdown when opened for reading.
+import { Markdown } from "@/components/markdown"
 
 interface Props {
   skills: Skill[]
@@ -64,7 +66,7 @@ export function SkillsPanel({
       }
       setInstructions((prev) => (prev.trim() ? `${prev.trim()}\n\n${joined}` : joined))
     } catch {
-      setImportError("Couldn't read that file. Supported: PDF, TXT, DOCX.")
+      setImportError("Couldn't read that file. Supported: PDF, TXT, MD, DOCX.")
     } finally {
       setImporting(false)
     }
@@ -186,7 +188,7 @@ export function SkillsPanel({
               )}
               {importing ? "Reading…" : "Upload file"}
             </button>
-            <span className="text-[11px] text-gray-3">Appends text from PDF, TXT, or Word</span>
+            <span className="text-[11px] text-gray-3">Appends text from PDF, TXT, MD or Word</span>
             {importError && (
               <p role="status" className="w-full text-[11px] leading-relaxed text-tr-red">
                 {importError}
@@ -346,9 +348,9 @@ function SkillDetails({ skill, onClose, onSave, onDelete }: DetailsProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-gray-4">
                   Instructions
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-                  {skill.instructions}
-                </p>
+                <div className="mt-1">
+                  <Markdown>{skill.instructions}</Markdown>
+                </div>
               </div>
             </div>
           )}

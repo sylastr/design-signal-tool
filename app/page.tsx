@@ -65,7 +65,8 @@ export default function Page() {
     toggle,
     setActive: setSkillActive,
     addCustom,
-    updateCustom,
+    updateSkill,
+    resetSkill,
     removeCustom,
     setHidden: setSkillHidden,
   } = useSkills()
@@ -291,7 +292,8 @@ export default function Page() {
         contexts={contexts}
         analysisPrefs={prefs}
         onAddSkill={addCustom}
-        onUpdateSkill={updateCustom}
+        onUpdateSkill={updateSkill}
+        onResetSkill={resetSkill}
         onRemoveSkill={removeCustom}
         onToggleSkillHidden={setSkillHidden}
         onAddContext={add}
@@ -359,7 +361,7 @@ export default function Page() {
                 skills={visibleSkills}
                 onToggle={toggle}
                 onAddCustom={addCustom}
-                onUpdateCustom={updateCustom}
+                onUpdateCustom={updateSkill}
                 onRemoveCustom={removeCustom}
               />
             )}

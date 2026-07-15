@@ -5,6 +5,7 @@ import { FileText, Info, Loader2, Lock, SlidersHorizontal, Trash2, Upload, X } f
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { InfoTooltip } from "@/components/session/info-tooltip"
+import { Markdown } from "@/components/markdown"
 
 interface Props {
   contextText: string
@@ -68,7 +69,7 @@ export function ContextPanel({
       const combined = contextText.trim() ? `${contextText.trim()}\n\n${extracted}` : extracted
       onContextChange(combined)
     } catch {
-      setImportError("Couldn't read that file. Supported: PDF, TXT, DOCX.")
+      setImportError("Couldn't read that file. Supported: PDF, TXT, MD, DOCX.")
     } finally {
       setImporting(false)
     }
@@ -118,7 +119,7 @@ export function ContextPanel({
           )}
           {importing ? "Reading…" : "Upload file"}
         </button>
-        <span className="text-[11px] text-gray-3">Appends text from PDF, TXT, or Word</span>
+        <span className="text-[11px] text-gray-3">Appends text from PDF, TXT, MD or Word</span>
         {importError && (
           <p role="status" className="w-full text-[11px] leading-relaxed text-tr-red">
             {importError}
@@ -339,10 +340,10 @@ function ContextDetails({ context, onClose, onSave, onDelete, onManageGlobal }: 
                 className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none focus:border-racing-green"
               />
             </div>
+          ) : context.text ? (
+            <Markdown>{context.text}</Markdown>
           ) : (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-              {context.text || "No text yet."}
-            </p>
+            <p className="text-sm leading-relaxed text-graphite">No text yet.</p>
           )}
         </div>
 
