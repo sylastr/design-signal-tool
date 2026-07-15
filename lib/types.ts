@@ -461,10 +461,59 @@ For every flagged item in this skill, the rationale must name the specific Saffr
   {
     id: "jtbd",
     name: "Jobs-to-be-Done",
-    description: "Frames critique around the user's core job and moment of decision.",
+    description:
+      "Frames critique around the user's core job and moment of decision: what progress they're trying to make, whether the design advances or obstructs it, and whether secondary tasks distract from the primary one. Requires clear context about the target user, their circumstance, and their goal — if context doesn't establish this, say so rather than inventing a job.",
     active: false,
-    instructions:
-      "Frame the critique around the user's job-to-be-done: the progress they are trying to make in a given circumstance. For each observation, ask whether the design advances or obstructs the core job, whether it surfaces the right information at the moment of decision, and whether secondary tasks distract from the primary job. Anchor findings to the supplied project context about target users and their goals; if the job is unclear from context, say so.",
+    instructions: `Jobs-to-be-Done is fundamentally a context-driven lens, more than any of the other skills. The premise (Clayton Christensen's framing, refined by Bob Moesta and Tony Ulwick) is that people don't want a product — they want to make progress in a specific circumstance, and they "hire" a design or feature to help. You cannot infer that circumstance from a screenshot alone. Every finding in this skill should trace back to a specific piece of supplied context (the audience, their goal, the situation they're in, what they were doing before this screen). Where context doesn't establish the job clearly, don't fabricate one — say explicitly that the job is unclear from the available context and that findings here will be limited until it's provided. A speculative "job" invented from the screenshot alone is worse than no finding at all, because it will read as authoritative when it isn't grounded in anything.
+
+**How this differs from Heuristic Usability and Content & Microcopy:** those skills ask "is this well-designed / well-written." This skill asks a different question first — "is this solving the right problem, prioritized correctly, for what this specific user is actually trying to accomplish right now." A screen can be usable, well-written, and visually clean while still solving the wrong job, over-serving a job nobody has, or burying the actual job under secondary tasks. Don't re-flag usability or wording issues here unless they specifically relate to job clarity or priority.
+
+### Establish the job before critiquing
+Before producing findings, state (briefly, once) what job you're evaluating against, drawn directly from context — for example: "Evaluating against the job: a busy tax professional needs to triage which client filings need immediate attention before end of day." If context gives audience but not circumstance, or circumstance but not desired outcome, note the gap and proceed with what's available, flagging lower confidence. If context gives no usable job information at all, say so plainly and either decline to produce job-specific findings or limit them to clearly-labeled inferences with a note that they need confirmation.
+
+A useful test: try to complete the sentence "When [situation from context], I want to [action], so I can [outcome]." If you can't fill in at least the situation and the outcome from what's been provided, the job isn't established well enough for confident critique.
+
+### Core job alignment
+- Check whether the screen's most prominent content and actions map directly to the job established from context. Flag anything that appears to be the primary visual/interactive focus but doesn't serve that job.
+- Flag a design that solves an adjacent or related problem instead of the actual one stated in context (e.g. context describes a user who needs to *decide what to act on first*, but the screen is optimized for *browsing everything* with no prioritization signal).
+- Flag missing support for a job explicitly stated in context — if context says the user needs to do X and the screen doesn't visibly enable X, that's a direct gap.
+
+### Moment of decision / trigger
+- Identify, from context, what circumstance brought the user to this screen (what were they doing right before, what prompted them to look here now). Check whether the screen surfaces the specific information needed to act *at that moment*, not just information in general.
+- Flag information that's present but requires extra clicks/navigation to reach when context suggests the user needs it immediately to make a time-sensitive decision.
+- Flag a design that treats all information as equally available/equally prioritized when context suggests the user is under time pressure or needs to triage.
+
+### Functional, emotional, and social dimensions
+Most jobs have more than one dimension — the functional task itself, how the user wants to *feel* while doing it, and how it affects how others perceive them.
+- **Functional** — does the screen actually help complete the concrete task described in context?
+- **Emotional** — if context implies the user needs confidence, reassurance, reduced anxiety, or a sense of control (e.g. a compliance-sensitive or high-stakes task), check whether the design reinforces that (clear confirmation, visible safeguards, unambiguous status) or works against it (ambiguous state, no confirmation, unclear consequences of an action).
+- **Social** — if context implies the output or action reflects on the user professionally (e.g. something a tax professional hands to a client, or a report presented to a manager), check whether the design supports that (e.g. produces something presentable, avoids exposing the user to obvious mistakes).
+- Flag a design that satisfies the functional job while ignoring an emotional or social dimension clearly implied by context.
+
+### Primary job vs secondary tasks
+- Flag secondary or incidental tasks that visually or structurally compete with the primary job for attention (e.g. promotional content, administrative settings, or lower-priority actions given equal or greater visual weight than the core task).
+- Flag flows that make the user complete unrelated secondary tasks before reaching the primary job, when context suggests the primary job is time-sensitive or urgent.
+- Note: not everything secondary is wrong to include — flag it only when it measurably distracts from or delays the core job established in context.
+
+### Progress, not features
+- Evaluate the screen by the progress it enables, not by how many features or options it offers. Flag a design that appears feature-rich but doesn't clearly advance the specific progress described in context.
+- Flag added complexity, options, or configuration that context doesn't suggest this user needs — this is over-serving the job, and it adds cognitive load without helping the user get where they're trying to go.
+- Flag the opposite as well — under-serving: a critical capability the job requires that's visibly missing or only partially supported.
+
+### Forces of progress
+People move toward a new solution because of push (frustration with the current way) and pull (the appeal of the new way), but are held back by anxiety (fear of a new problem) and habit (comfort with the old way, even if imperfect). Where context describes what the user is moving away from or hesitant about:
+- Flag a design that doesn't address a stated source of frustration (push) from context.
+- Flag a design that introduces new visible uncertainty or risk (anxiety) at the point where the user is expected to commit to an action — e.g. no visible confirmation of outcome, no clear reversibility, when context suggests this user would need that reassurance to switch from a familiar process.
+- Flag steps that seem to unnecessarily preserve an old, more effortful way of doing something when context suggests the user is trying to leave that behind.
+
+### Writing the finding
+Every finding here should cite the specific context point it's grounded in — quote or closely paraphrase it (e.g. "Context states the target user is a busy tax professional focused on triage during tax season — this screen surfaces all statuses with equal visual weight, which doesn't support that triage need"). If a finding can't be tied to a specific context point, either don't include it in this skill, or clearly label it as a general inference and lower its tier. Tier guidance:
+- **Must-fix** — the design visibly obstructs or contradicts the stated core job (buries the primary task, prioritizes an unrelated task above it, omits something context says is essential to the job).
+- **Should-consider** — the design serves the functional job but misses an emotional/social dimension clearly implied by context, or includes distracting secondary tasks that aren't blocking but do add friction.
+- **Nice-to-have** — opportunities to better reinforce progress (small reassurance cues, minor reduction of unnecessary complexity) that would strengthen alignment with the job without being required for it.
+
+### When context is insufficient
+If the target user, their circumstance, or their goal isn't established clearly enough to identify a job, state this directly rather than producing speculative findings: "The job this user is trying to accomplish isn't clear from the provided context — add detail on who this user is, what situation brings them to this screen, and what outcome they're after for a meaningful Jobs-to-be-Done review." You may still note anything glaring and job-agnostic (e.g. a screen that seems to serve no discernible purpose at all), but keep the volume of findings proportional to how much context you actually have.`,
   },
   {
     id: "content",
