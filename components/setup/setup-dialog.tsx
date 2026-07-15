@@ -119,7 +119,7 @@ export function SetupDialog({
             id="setup-title"
             className="px-4 pb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-4"
           >
-            Setup
+            Settings
           </p>
           <nav className="flex flex-col" aria-label="Setup sections">
             {navItems.map((item) => {
