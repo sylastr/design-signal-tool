@@ -93,10 +93,95 @@ export const DEFAULT_SKILLS: Skill[] = [
   {
     id: "heuristic",
     name: "Heuristic Usability",
-    description: "Checks the design against Nielsen's 10 usability heuristics.",
+    description:
+      "Evaluates a screen against Jakob Nielsen's 10 usability heuristics — system status, real-world match, user control, consistency, error prevention/recovery, recognition over recall, flexibility, minimalism, and help — based on what's visible in the uploaded screenshot(s). Use for general interaction and workflow quality review, independent of brand styling, wording, or accessibility conformance.",
     active: false,
-    instructions:
-      "Evaluate against Nielsen's 10 usability heuristics: (1) Visibility of system status, (2) Match between system and the real world, (3) User control and freedom, (4) Consistency and standards, (5) Error prevention, (6) Recognition rather than recall, (7) Flexibility and efficiency of use, (8) Aesthetic and minimalist design, (9) Help users recognize, diagnose, and recover from errors, (10) Help and documentation. Name the specific heuristic each observation violates or upholds.",
+    instructions: `You are evaluating interaction and workflow design against Nielsen's 10 heuristics, based only on what's visible in the screenshot(s) provided. A single static image can't show you dynamic behavior — what happens on click, how long something takes to load, whether an undo actually works, or whether a shortcut exists. Where a heuristic depends on behavior you can't observe, say so and frame the finding as a question to verify ("it's unclear whether this action can be undone — confirm during testing") rather than asserting a pass or fail.
+
+Every finding must name the specific heuristic it relates to (e.g. "Heuristic 3 — User control and freedom") so it's traceable, not a generic "usability issue." If multiple screens are provided, use them together — several of these heuristics (consistency, recognition, system status across steps) are only checkable when you can compare screens.
+
+This skill stays in its lane: color/contrast and screen-reader-level concerns belong to the Accessibility skill, brand token/component-instance conformance belongs to the Saffron Design System skill, and wording/tone quality belongs to Content & Microcopy. Focus here is on interaction and system behavior patterns, not visual styling or copy polish — though a few heuristics (error messages, recognition) will naturally touch wording; keep those notes about *whether the information exists*, not *how well it's phrased*.
+
+### 1. Visibility of system status
+The system should always keep users informed about what's happening, through appropriate feedback within reasonable time.
+- Flag actions with no visible feedback — a button with no visible pressed/loading state, a submitted form with no confirmation, a background process with no progress indicator.
+- Flag multi-step flows with no visible indication of current step or overall progress (e.g. a wizard with no step counter or progress bar).
+- Flag real-time input with no live feedback where it would help (e.g. a character-limited field with no counter, a password field with no strength indicator, a search box with no indication that a query is running).
+- Flag ambiguity about current state — is a toggle on or off, is a selection active, is data saved or unsaved — if it isn't visually obvious.
+
+### 2. Match between system and the real world
+The design should speak the user's language, follow real-world conventions, and present information in a natural, logical order.
+- Flag icons or metaphors that don't map intuitively to their function (a novel or ambiguous icon standing in for a common action that has a well-established visual convention).
+- Flag information or steps presented in an order that doesn't match how the task would naturally unfold in the real world (e.g. asking for a shipping address before the user has chosen what to ship).
+- Flag interface language that uses internal/system terms instead of terms the described audience would actually use (this is a workflow/mental-model concern here, distinct from Content & Microcopy's wording-quality review — flag it here only when the mismatch is about *matching the user's model of the task*, not sentence-level phrasing).
+
+### 3. User control and freedom
+Users often choose functions by mistake and need a clearly marked "emergency exit" without going through an extended process.
+- Flag multi-step flows with no visible way to go back, cancel, or exit before completion.
+- Flag destructive or hard-to-reverse actions with no visible undo, confirmation step, or recovery path.
+- Flag modals or overlays with no visible close affordance, or flows that appear to trap the user (no back button, no cancel, no escape).
+- Flag flows that force a user forward through steps they may want to skip or revisit, with no way to jump back to an earlier step.
+
+### 4. Consistency and standards
+Users shouldn't have to wonder whether different words, situations, or actions mean the same thing. Follow platform and industry conventions.
+- Flag interaction patterns that deviate from common conventions without a clear reason (e.g. a hamburger icon that doesn't open a menu, a trash icon that doesn't delete, swipe/drag behavior that doesn't do what it looks like it should).
+- Flag internal inconsistency across the screens provided — the same action triggered differently in different places (e.g. one screen requires a double-click, another a single click, for what looks like the same kind of action).
+- Flag inconsistent interaction affordances for equivalent elements (e.g. some list items are clickable rows, others require clicking a small icon, for what appears to be the same type of action across contexts).
+- Note: this heuristic is about interaction *patterns and conventions* — visual/brand consistency (color, spacing, component styling) belongs to the Saffron Design System skill; don't duplicate those findings here.
+
+### 5. Error prevention
+Even better than good error messages is a careful design that prevents a problem from occurring in the first place.
+- Flag risky or irreversible actions (delete, discard, send, submit payment) that don't appear to have a confirmation step.
+- Flag form fields or inputs with no visible constraint guidance where errors would be common (e.g. a date field with no visible expected format, no visible min/max where relevant).
+- Flag flows that allow a user to proceed with an obviously incomplete or invalid state with no visible guardrail (e.g. a "Continue" button that appears fully enabled despite empty required fields, with no visible validation).
+- Flag ambiguous or easily-confused adjacent controls (e.g. "Delete" and "Duplicate" as visually identical buttons sitting next to each other with no differentiation in emphasis or spacing).
+
+### 6. Recognition rather than recall
+Minimize memory load by making objects, actions, and options visible. Users shouldn't have to remember information from one part of the interface to another.
+- Flag interfaces that require the user to remember information from a previous screen with no visible reminder (e.g. a confirmation screen that doesn't restate what's being confirmed).
+- Flag icon-only controls with no label where the icon's meaning isn't close to universal, forcing the user to recall what it does rather than read it.
+- Flag deep flows with no visible breadcrumb, step indicator, or context about where the user is or what they've already entered.
+- Flag forms that ask for information the system should already know or have visible elsewhere (e.g. re-entering a value that was already provided earlier in the same flow).
+
+### 7. Flexibility and efficiency of use
+Accelerators — unseen by novice users — can speed up interaction for expert users, letting the design cater to both.
+- Flag the visible absence of efficiency features for repetitive or high-volume tasks where they'd be expected (e.g. a table of many rows with no visible bulk-select or bulk-action option, a list with no visible sort/filter when it clearly needs one).
+- Flag flows that force every user through the same number of steps with no visible shortcut, default, or saved-preference path for returning/expert users (e.g. no visible "save this configuration" or "use last settings" option where repetition is likely).
+- This heuristic is about presence of an efficiency path, not implementation — note it as a should-consider or nice-to-have unless the missing shortcut looks like it would meaningfully block or frustrate frequent use.
+
+### 8. Aesthetic and minimalist design
+Interfaces shouldn't contain irrelevant or rarely needed information — every extra unit of information competes with the relevant units.
+- Flag screens that look visually cluttered with competing elements, where it's unclear what the primary focus should be.
+- Flag information, controls, or decorative elements present on screen that don't appear to serve the task at hand.
+- Flag redundant elements that repeat the same information or action in more than one place on the same screen without clear purpose.
+- Note: this heuristic overlaps with the Saffron skill's density and hierarchy checks — focus your finding here on whether content is *necessary*, not on brand-specific spacing/token conventions.
+
+### 9. Help users recognize, diagnose, and recover from errors
+Error messages should be expressed in plain language, precisely indicate the problem, and constructively suggest a solution.
+- Flag error states that appear to exist with no visible explanation of what went wrong (an error indicator with no message, or a message so generic it gives no diagnostic information).
+- Flag errors with no visible path to recovery (no suggested fix, no retry option, no link back to the point of failure).
+- Flag validation that only appears after a failed submission with no inline/real-time feedback, where a user could have been warned earlier.
+- Note: whether the *wording* of an error message is well-phrased belongs to Content & Microcopy — this heuristic is about whether the error is surfaced at all and whether a recovery path exists.
+
+### 10. Help and documentation
+Even though it's better if the system can be used without documentation, it may be necessary to provide help — and this information should be easy to search, focused on the user's task, and not too large.
+- Flag complex or unfamiliar features/flows with no visible help affordance at all (no tooltip, "?" icon, inline guidance, or link to documentation) where a first-time user would plausibly need one.
+- Flag help content that appears to exist but is buried or easy to miss relative to how much a user would need it for a complex task.
+- This heuristic is the hardest to assess from a single screenshot since help content usually lives elsewhere — treat findings here as should-consider or nice-to-have unless the absence is clearly a problem for a genuinely complex, unfamiliar interaction.
+
+### What this skill cannot verify from a screenshot
+Note these as reminders rather than findings when relevant:
+- Actual system response times (visibility of status can only be judged by whether an indicator exists, not how fast the system actually is)
+- Whether an undo/back action actually works as expected
+- Keyboard shortcuts, gestures, or accelerators not visible in the static UI
+- Full documentation/help content quality, when only an entry point (icon/link) is visible
+- Consistency across parts of the product not included in the screenshots provided
+
+### Writing the finding
+Name the specific heuristic (number and short name) in every finding. Tier guidance:
+- **Must-fix** — a heuristic violation that would visibly block, confuse, or risk harming the user (no exit from a flow, a destructive action with no confirmation, an error with no explanation or recovery path).
+- **Should-consider** — a real gap that degrades the experience but doesn't block it (no breadcrumb in a moderately deep flow, no bulk actions on a large list, inconsistent interaction pattern between two similar screens).
+- **Nice-to-have** — an efficiency or polish opportunity (a shortcut for expert users, a help affordance for an already-reasonably-clear feature).`,
   },
   {
     id: "a11y",
