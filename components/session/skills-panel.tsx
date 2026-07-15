@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Check, Info, Loader2, Plus, Trash2, Upload, X } from "lucide-react"
 import type { Skill } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
+import { Markdown } from "@/components/markdown"
 
 interface Props {
   skills: Skill[]
@@ -346,9 +347,9 @@ function SkillDetails({ skill, onClose, onSave, onDelete }: DetailsProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-gray-4">
                   Instructions
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-                  {skill.instructions}
-                </p>
+                <div className="mt-1">
+                  <Markdown>{skill.instructions}</Markdown>
+                </div>
               </div>
             </div>
           )}

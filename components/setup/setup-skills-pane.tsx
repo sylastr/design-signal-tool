@@ -5,6 +5,7 @@ import { ChevronDown, Loader2, Pencil, Plus, RotateCcw, Trash2, Upload } from "l
 import type { Skill } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { ToggleSwitch } from "@/components/setup/toggle-switch"
+import { Markdown } from "@/components/markdown"
 
 interface Props {
   skills: Skill[]
@@ -332,9 +333,7 @@ export function SetupSkillsPane({
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-                      {s.instructions}
-                    </p>
+                    <Markdown>{s.instructions}</Markdown>
                   )}
                 </div>
               )}

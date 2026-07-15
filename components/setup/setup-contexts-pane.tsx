@@ -5,6 +5,7 @@ import { ChevronDown, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { ToggleSwitch } from "@/components/setup/toggle-switch"
+import { Markdown } from "@/components/markdown"
 
 interface Props {
   contexts: SavedContext[]
@@ -290,9 +291,7 @@ export function SetupContextsPane({
                         </div>
                       </div>
                     ) : (
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-                        {c.text}
-                      </p>
+                      <Markdown>{c.text}</Markdown>
                     )}
                   </div>
                 )}

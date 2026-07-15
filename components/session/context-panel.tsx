@@ -5,6 +5,7 @@ import { FileText, Info, Loader2, Lock, SlidersHorizontal, Trash2, Upload, X } f
 import type { SavedContext } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { InfoTooltip } from "@/components/session/info-tooltip"
+import { Markdown } from "@/components/markdown"
 
 interface Props {
   contextText: string
@@ -339,10 +340,10 @@ function ContextDetails({ context, onClose, onSave, onDelete, onManageGlobal }: 
                 className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none focus:border-racing-green"
               />
             </div>
+          ) : context.text ? (
+            <Markdown>{context.text}</Markdown>
           ) : (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-graphite">
-              {context.text || "No text yet."}
-            </p>
+            <p className="text-sm leading-relaxed text-graphite">No text yet.</p>
           )}
         </div>
 
