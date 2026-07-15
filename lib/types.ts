@@ -67,6 +67,8 @@ export interface Skill {
   custom?: boolean
   /** Hidden from the wizard at a platform level via Setup. Distinct from active. */
   hidden?: boolean
+  /** True when a built-in skill has been customized (has a saved override). */
+  edited?: boolean
 }
 
 export interface SavedContext {

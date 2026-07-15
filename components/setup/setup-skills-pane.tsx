@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ChevronDown, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react"
+import { ChevronDown, Loader2, Pencil, Plus, RotateCcw, Trash2, Upload } from "lucide-react"
 import type { Skill } from "@/lib/types"
 import { extractTextFromFile } from "@/lib/file-extract"
 import { ToggleSwitch } from "@/components/setup/toggle-switch"
@@ -9,7 +9,8 @@ import { ToggleSwitch } from "@/components/setup/toggle-switch"
 interface Props {
   skills: Skill[]
   onAddCustom: (name: string, description: string, instructions: string) => void
-  onUpdateCustom: (id: string, name: string, description: string, instructions: string) => void
+  onUpdateSkill: (id: string, name: string, description: string, instructions: string) => void
+  onResetSkill: (id: string) => void
   onRemoveCustom: (id: string) => void
   onToggleHidden: (id: string, hidden: boolean) => void
 }
@@ -17,7 +18,8 @@ interface Props {
 export function SetupSkillsPane({
   skills,
   onAddCustom,
-  onUpdateCustom,
+  onUpdateSkill,
+  onResetSkill,
   onRemoveCustom,
   onToggleHidden,
 }: Props) {
@@ -80,7 +82,7 @@ export function SetupSkillsPane({
 
   const submitEdit = () => {
     if (!editId || !editName.trim() || !editInstructions.trim()) return
-    onUpdateCustom(editId, editName.trim(), editDescription.trim(), editInstructions.trim())
+    onUpdateSkill(editId, editName.trim(), editDescription.trim(), editInstructions.trim())
     setEditId(null)
   }
 
@@ -90,8 +92,8 @@ export function SetupSkillsPane({
         <div>
           <h3 className="text-lg font-bold tracking-tight text-graphite">Skills</h3>
           <p className="mt-1 text-sm leading-relaxed text-gray-4">
-            The critique lenses available in the review flow. Hide the ones you don&apos;t use,
-            or add your own.{" "}
+            The critique lenses available in the review flow. Edit any lens to fit your team,
+            hide the ones you don&apos;t use, or add your own.{" "}
             <span className="font-medium text-graphite">
               {visibleCount} of {skills.length} shown
             </span>
@@ -221,12 +223,19 @@ export function SetupSkillsPane({
                     aria-hidden
                   />
                   <span className="flex min-w-0 flex-col">
-                    <span
-                      className={`truncate text-sm font-semibold ${
-                        s.hidden ? "text-gray-4" : "text-graphite"
-                      }`}
-                    >
-                      {s.name}
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`truncate text-sm font-semibold ${
+                          s.hidden ? "text-gray-4" : "text-graphite"
+                        }`}
+                      >
+                        {s.name}
+                      </span>
+                      {s.edited && (
+                        <span className="shrink-0 border border-gray-2 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-gray-4">
+                          Edited
+                        </span>
+                      )}
                     </span>
                     <span className="truncate text-xs text-gray-3">
                       {s.description || (s.custom ? "Custom skill" : "Built-in skill")}
@@ -235,27 +244,25 @@ export function SetupSkillsPane({
                 </button>
 
                 <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => (isEdit ? setEditId(null) : startEdit(s))}
+                    aria-label={`Edit ${s.name}`}
+                    title="Edit"
+                    className="flex h-8 w-8 items-center justify-center border border-transparent text-gray-4 transition-colors hover:border-gray-3 hover:text-graphite"
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden />
+                  </button>
                   {s.custom && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => (isEdit ? setEditId(null) : startEdit(s))}
-                        aria-label={`Edit ${s.name}`}
-                        title="Edit"
-                        className="flex h-8 w-8 items-center justify-center border border-transparent text-gray-4 transition-colors hover:border-gray-3 hover:text-graphite"
-                      >
-                        <Pencil className="h-4 w-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemoveCustom(s.id)}
-                        aria-label={`Delete ${s.name}`}
-                        title="Delete"
-                        className="flex h-8 w-8 items-center justify-center border border-transparent text-gray-4 transition-colors hover:border-tr-red hover:text-tr-red"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveCustom(s.id)}
+                      aria-label={`Delete ${s.name}`}
+                      title="Delete"
+                      className="flex h-8 w-8 items-center justify-center border border-transparent text-gray-4 transition-colors hover:border-tr-red hover:text-tr-red"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </button>
                   )}
                   <ToggleSwitch
                     checked={!s.hidden}
@@ -268,7 +275,7 @@ export function SetupSkillsPane({
               {/* Expanded detail / edit */}
               {isExpanded && (
                 <div className="border-t border-gray-2 bg-gray-1 px-4 py-3">
-                  {isEdit && s.custom ? (
+                  {isEdit ? (
                     <div className="flex flex-col gap-2">
                       <input
                         type="text"
@@ -292,7 +299,7 @@ export function SetupSkillsPane({
                         aria-label="Edit skill instructions"
                         className="ds-scroll resize-y border border-gray-2 bg-white px-3 py-2 text-sm leading-relaxed text-graphite outline-none focus:border-racing-green"
                       />
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setEditId(null)}
@@ -308,6 +315,20 @@ export function SetupSkillsPane({
                         >
                           Save changes
                         </button>
+                        {/* Built-in skills can be restored to their shipped copy. */}
+                        {!s.custom && s.edited && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onResetSkill(s.id)
+                              setEditId(null)
+                            }}
+                            className="ml-auto inline-flex items-center gap-1.5 border border-transparent px-2.5 py-1.5 text-xs font-medium text-gray-4 transition-colors hover:text-tr-orange"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                            Reset to default
+                          </button>
+                        )}
                       </div>
                     </div>
                   ) : (

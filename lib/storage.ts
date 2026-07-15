@@ -10,16 +10,23 @@ import {
 
 const CONTEXTS_KEY = "design-signal:contexts"
 const CUSTOM_SKILLS_KEY = "design-signal:custom-skills"
+const SKILL_OVERRIDES_KEY = "design-signal:skill-overrides"
 const HIDDEN_SKILLS_KEY = "design-signal:hidden-skills"
 const DRAFT_CONTEXT_KEY = "design-signal:draft-context"
 const ANALYSIS_PREFS_KEY = "design-signal:analysis-prefs"
 const ONBOARDING_KEY = "design-signal:onboarding-complete"
+
+// Overrides for built-in skills, keyed by skill id. Lets users customize the
+// default lenses without losing the ability to reset them back to shipped copy.
+type SkillOverride = { name?: string; description?: string; instructions?: string }
+type SkillOverrides = Record<string, SkillOverride>
 
 // Every key this app persists. Kept together so a reset wipes everything
 // (including onboarding, so a reset returns the user to a fresh first-run).
 const ALL_STORAGE_KEYS = [
   CONTEXTS_KEY,
   CUSTOM_SKILLS_KEY,
+  SKILL_OVERRIDES_KEY,
   HIDDEN_SKILLS_KEY,
   DRAFT_CONTEXT_KEY,
   ANALYSIS_PREFS_KEY,
@@ -38,6 +45,125 @@ export function clearAllData() {
     /* ignore private mode / access errors */
   }
   window.location.reload()
+}
+
+/* ---------- Backup: export / import the whole configuration ---------- */
+
+const EXPORT_VERSION = 1
+
+interface ConfigBundle {
+  app: "design-signal"
+  version: number
+  exportedAt: string
+  contexts: SavedContext[]
+  customSkills: Skill[]
+  skillOverrides: SkillOverrides
+  hiddenSkills: string[]
+  analysisPrefs: Partial<AnalysisPrefs>
+}
+
+/* Gather everything the user has added/customized into one JSON file and
+   trigger a download. Excludes ephemeral state (uploaded images, drafts). */
+export function exportConfig() {
+  if (typeof window === "undefined") return
+  const bundle: ConfigBundle = {
+    app: "design-signal",
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    contexts: readJSON<SavedContext[]>(CONTEXTS_KEY, []),
+    customSkills: readJSON<Skill[]>(CUSTOM_SKILLS_KEY, []),
+    skillOverrides: readJSON<SkillOverrides>(SKILL_OVERRIDES_KEY, {}),
+    hiddenSkills: readJSON<string[]>(HIDDEN_SKILLS_KEY, []),
+    analysisPrefs: readJSON<Partial<AnalysisPrefs>>(ANALYSIS_PREFS_KEY, {}),
+  }
+  const stamp = new Date().toISOString().slice(0, 10)
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `design-signal-config-${stamp}.json`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+/* Merge an exported bundle back into local storage. Existing entries are kept;
+   entries that share an id are overwritten by the imported copy. Skills and
+   contexts are restored at the global level so they persist across sessions.
+   Returns a summary so the UI can confirm what was restored. Caller reloads. */
+export function importConfig(raw: string): {
+  ok: boolean
+  error?: string
+  imported?: { contexts: number; customSkills: number; overrides: number }
+} {
+  if (typeof window === "undefined") return { ok: false, error: "Unavailable." }
+  let data: Partial<ConfigBundle>
+  try {
+    data = JSON.parse(raw)
+  } catch {
+    return { ok: false, error: "That file isn't valid JSON." }
+  }
+  if (!data || typeof data !== "object" || data.app !== "design-signal") {
+    return { ok: false, error: "This doesn't look like a Design Signal config file." }
+  }
+
+  let contextsCount = 0
+  let skillsCount = 0
+  let overridesCount = 0
+
+  try {
+    // Contexts — merge by id, force global scope so they surface in Settings.
+    if (Array.isArray(data.contexts)) {
+      const existing = readJSON<SavedContext[]>(CONTEXTS_KEY, [])
+      const byId = new Map(existing.map((c) => [c.id, c]))
+      for (const c of data.contexts) {
+        if (!c || typeof c.id !== "string") continue
+        byId.set(c.id, { ...c, scope: "global" })
+        contextsCount++
+      }
+      writeJSON(CONTEXTS_KEY, [...byId.values()])
+    }
+
+    // Custom skills — merge by id.
+    if (Array.isArray(data.customSkills)) {
+      const existing = readJSON<Skill[]>(CUSTOM_SKILLS_KEY, [])
+      const byId = new Map(existing.map((s) => [s.id, s]))
+      for (const s of data.customSkills) {
+        if (!s || typeof s.id !== "string") continue
+        byId.set(s.id, { ...s, custom: true })
+        skillsCount++
+      }
+      writeJSON(CUSTOM_SKILLS_KEY, [...byId.values()])
+    }
+
+    // Built-in skill overrides — merge object.
+    if (data.skillOverrides && typeof data.skillOverrides === "object") {
+      const existing = readJSON<SkillOverrides>(SKILL_OVERRIDES_KEY, {})
+      const merged = { ...existing, ...data.skillOverrides }
+      overridesCount = Object.keys(data.skillOverrides).length
+      writeJSON(SKILL_OVERRIDES_KEY, merged)
+    }
+
+    // Hidden skills — union.
+    if (Array.isArray(data.hiddenSkills)) {
+      const existing = readJSON<string[]>(HIDDEN_SKILLS_KEY, [])
+      writeJSON(HIDDEN_SKILLS_KEY, [...new Set([...existing, ...data.hiddenSkills])])
+    }
+
+    // Analysis prefs — imported values win.
+    if (data.analysisPrefs && typeof data.analysisPrefs === "object") {
+      const existing = readJSON<Partial<AnalysisPrefs>>(ANALYSIS_PREFS_KEY, {})
+      writeJSON(ANALYSIS_PREFS_KEY, { ...existing, ...data.analysisPrefs })
+    }
+  } catch {
+    return { ok: false, error: "Something went wrong while restoring the file." }
+  }
+
+  return {
+    ok: true,
+    imported: { contexts: contextsCount, customSkills: skillsCount, overrides: overridesCount },
+  }
 }
 
 export const MIN_SUGGESTIONS = 1
@@ -209,9 +335,21 @@ export function useSkills() {
   useEffect(() => {
     const custom = readJSON<Skill[]>(CUSTOM_SKILLS_KEY, [])
     const hidden = readJSON<string[]>(HIDDEN_SKILLS_KEY, [])
+    const overrides = readJSON<SkillOverrides>(SKILL_OVERRIDES_KEY, {})
     const hiddenSet = new Set(hidden)
     setSkills(
-      [...DEFAULT_SKILLS, ...custom].map((s) => ({ ...s, hidden: hiddenSet.has(s.id) })),
+      [...DEFAULT_SKILLS, ...custom].map((s) => {
+        // Overrides only apply to built-in skills; custom skills are stored whole.
+        const ov = !s.custom ? overrides[s.id] : undefined
+        return {
+          ...s,
+          name: ov?.name ?? s.name,
+          description: ov?.description ?? s.description,
+          instructions: ov?.instructions ?? s.instructions,
+          hidden: hiddenSet.has(s.id),
+          edited: !!ov,
+        }
+      }),
     )
   }, [])
 
@@ -220,6 +358,18 @@ export function useSkills() {
       CUSTOM_SKILLS_KEY,
       all.filter((s) => s.custom),
     )
+  }, [])
+
+  const persistOverride = useCallback((id: string, data: SkillOverride) => {
+    const overrides = readJSON<SkillOverrides>(SKILL_OVERRIDES_KEY, {})
+    overrides[id] = data
+    writeJSON(SKILL_OVERRIDES_KEY, overrides)
+  }, [])
+
+  const clearOverride = useCallback((id: string) => {
+    const overrides = readJSON<SkillOverrides>(SKILL_OVERRIDES_KEY, {})
+    delete overrides[id]
+    writeJSON(SKILL_OVERRIDES_KEY, overrides)
   }, [])
 
   const persistHidden = useCallback((all: Skill[]) => {
@@ -257,17 +407,47 @@ export function useSkills() {
     [persistCustom],
   )
 
-  const updateCustom = useCallback(
+  // Edit any skill. Custom skills persist whole; built-in skills persist an
+  // override (so they can later be reset to their shipped copy).
+  const updateSkill = useCallback(
     (id: string, name: string, description: string, instructions: string) => {
       setSkills((prev) => {
+        const target = prev.find((s) => s.id === id)
+        if (!target) return prev
         const next = prev.map((s) =>
-          s.id === id && s.custom ? { ...s, name, description, instructions } : s,
+          s.id === id ? { ...s, name, description, instructions, edited: !s.custom } : s,
         )
-        persistCustom(next)
+        if (target.custom) {
+          persistCustom(next)
+        } else {
+          persistOverride(id, { name, description, instructions })
+        }
         return next
       })
     },
-    [persistCustom],
+    [persistCustom, persistOverride],
+  )
+
+  // Restore a built-in skill to its shipped copy by dropping its override.
+  const resetSkill = useCallback(
+    (id: string) => {
+      clearOverride(id)
+      setSkills((prev) =>
+        prev.map((s) => {
+          if (s.id !== id) return s
+          const def = DEFAULT_SKILLS.find((d) => d.id === id)
+          if (!def) return s
+          return {
+            ...s,
+            name: def.name,
+            description: def.description,
+            instructions: def.instructions,
+            edited: false,
+          }
+        }),
+      )
+    },
+    [clearOverride],
   )
 
   const removeCustom = useCallback(
@@ -294,5 +474,5 @@ export function useSkills() {
     [persistHidden],
   )
 
-  return { skills, toggle, setActive, addCustom, updateCustom, removeCustom, setHidden }
+  return { skills, toggle, setActive, addCustom, updateSkill, resetSkill, removeCustom, setHidden }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Layers, RotateCcw, ScrollText, SlidersHorizontal, X } from "lucide-react"
+import { DatabaseBackup, Layers, ScrollText, SlidersHorizontal, X } from "lucide-react"
 import type { AnalysisPrefs, SavedContext, SectionKey, Skill, Tier } from "@/lib/types"
 import { SetupSkillsPane } from "@/components/setup/setup-skills-pane"
 import { SetupContextsPane } from "@/components/setup/setup-contexts-pane"
@@ -20,6 +20,7 @@ interface Props {
   analysisPrefs: AnalysisPrefs
   onAddSkill: (name: string, description: string, instructions: string) => void
   onUpdateSkill: (id: string, name: string, description: string, instructions: string) => void
+  onResetSkill: (id: string) => void
   onRemoveSkill: (id: string) => void
   onToggleSkillHidden: (id: string, hidden: boolean) => void
   onAddContext: (name: string, text: string) => void
@@ -40,6 +41,7 @@ export function SetupDialog({
   analysisPrefs,
   onAddSkill,
   onUpdateSkill,
+  onResetSkill,
   onRemoveSkill,
   onToggleSkillHidden,
   onAddContext,
@@ -86,7 +88,7 @@ export function SetupDialog({
       count: contexts.filter((c) => c.scope !== "local").length,
     },
     { id: "analysis", label: "Analysis", icon: SlidersHorizontal },
-    { id: "reset", label: "Reset", icon: RotateCcw },
+    { id: "reset", label: "Backup & reset", icon: DatabaseBackup },
   ]
 
   return (
@@ -164,7 +166,8 @@ export function SetupDialog({
               <SetupSkillsPane
                 skills={skills}
                 onAddCustom={onAddSkill}
-                onUpdateCustom={onUpdateSkill}
+                onUpdateSkill={onUpdateSkill}
+                onResetSkill={onResetSkill}
                 onRemoveCustom={onRemoveSkill}
                 onToggleHidden={onToggleSkillHidden}
               />
