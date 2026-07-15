@@ -308,9 +308,61 @@ For every flagged item in this skill, the rationale must name the specific Saffr
   {
     id: "content",
     name: "Content & Microcopy",
-    description: "Evaluates clarity, voice, labels, and error/empty-state copy.",
+    description:
+      "Evaluates the actual wording visible in a screen — voice, clarity, labels, CTAs, error and empty-state copy — against UX writing best practice and the product's stated audience. Use for any screen where the words themselves (not just the visual design) need review.",
     active: false,
-    instructions:
-      "Evaluate the interface's language and content design: clarity and scannability of labels, headings, and body copy; consistency of terminology and voice; specific, actionable button and link text (avoid vague 'Submit' or 'Click here'); human error messages that explain cause and recovery; reading level appropriate to the audience; and empty, loading, and success states that guide the user. Flag jargon, ambiguity, and copy that assumes context the user lacks.",
+    instructions: `You are evaluating the words visible in a screenshot, not the underlying content strategy or a full content style guide. You only have what's legible in the image plus whatever project context has been provided. Don't invent or guess at copy that isn't shown (e.g. don't assume what an error message says if it isn't visible, and don't assess tone across a full user journey you haven't been shown screens for). If a string is truncated, cut off, or too small to read confidently, say so rather than guessing at its meaning.
+
+Ground every finding in one of two things: the audience/context the designer provided (e.g. "this reads as too casual for the tax professionals described in context"), or a named content-design principle when no context applies (e.g. "front-load the key information — this follows the inverted pyramid principle"). Avoid vague notes like "copy could be tighter" — say what's wrong and why it matters for this audience.
+
+### Voice & tone
+- **Matches the stated audience.** Compare tone against the audience described in context — flag copy that's more casual/playful than the audience would expect (e.g. exclamation points and jokey phrasing in a professional/legal/financial tool), or copy that's needlessly stiff and formal for a consumer-friendly product. Cite the specific context point that makes the mismatch clear.
+- **Consistent tone across the screen.** Flag a screen where some copy reads casual and other copy reads formal with no apparent reason (e.g. a friendly empty state next to a curt, clinical error message).
+- **Confident and direct.** Flag hedging language that undermines trust ("Oops, something might have gone wrong maybe") or overly apologetic error copy that doesn't actually help the user recover.
+- **Human, not robotic.** Flag copy that reads like a raw system/API response rather than something written for a person (e.g. "Error: 400 Bad Request" surfaced directly to an end user with no plain-language translation).
+
+### Clarity & plain language
+- **Say it simply.** Flag unnecessarily complex sentence structure, jargon the stated audience wouldn't reasonably know, or wordiness where a shorter phrase would do. Note: domain-specific terminology the audience *would* know (e.g. tax terms for tax professionals) is appropriate — only flag jargon that's genuinely inaccessible to the described users.
+- **One idea per sentence.** Flag long, multi-clause sentences in UI copy (labels, helper text, tooltips) where the meaning would land faster split into two shorter ones.
+- **Front-load the important part.** Flag sentences or labels that bury the key information or the required action at the end when it should lead (e.g. "In order to continue with your submission, you must first verify your email" instead of "Verify your email to continue").
+- **Active voice for instructions.** Flag passive constructions in instructional copy ("Your request has been received and will be processed" vs. "We've received your request").
+
+### UI text & labels
+- **Descriptive, specific CTAs.** Button and link labels should describe the actual action, not a generic verb. Flag vague CTAs like "Submit," "OK," or "Click here" where a specific label ("Create project," "Send invitation") would remove ambiguity — this also helps screen reader users navigating by link/button text alone.
+- **Labels describe content, not implementation.** Flag technical or internal-sounding labels exposed to end users (e.g. a field literally labeled "user_id" or a status literally labeled "PENDING_REVIEW" with no human-readable treatment).
+- **No placeholder-as-label.** If a field's only visible label is placeholder text inside the input (rather than a persistent label above/beside it), flag it — this is a content and accessibility anti-pattern together, since the label disappears the moment the user starts typing.
+- **Consistent capitalization.** Pick one convention (commonly sentence case for buttons/labels/headings in modern UI) and flag inconsistency — e.g. some buttons in Title Case and others in sentence case within the same screen or flow.
+- **Consistent terminology.** The same concept should be called the same thing everywhere in the flow — flag a feature, object, or action that's named differently across screens (e.g. "Workspace" on one screen and "Project" on another for what looks like the same concept).
+
+### Error, empty, and system-status messages
+- **Errors explain what happened and what to do next.** Flag error messages that only state that something went wrong without saying what or how to fix it (e.g. "An error occurred" with no further detail visible).
+- **Errors don't blame the user.** Flag accusatory phrasing ("You entered an invalid value") in favor of neutral framing ("That value doesn't look right — try …") where visible copy suggests this pattern.
+- **Field-level errors are specific.** Flag generic validation copy ("This field is required") where a more specific message would help (e.g. naming the expected format for a date or ID field), if the field's purpose is clear from context.
+- **Empty states guide the next step.** Flag an empty state that only says there's nothing there without telling the user what to do about it (a first-run state should explain the value and prompt an action; a zero-results state should suggest adjusting filters or search terms).
+- **Success/confirmation messages are specific.** Flag generic confirmations ("Success!") where confirming what happened would build more confidence ("Invoice sent to client@email.com").
+
+### Formatting & scannability
+- **Chunking.** Flag dense paragraphs of UI copy where a list, short lines, or bolded key terms would make the content easier to scan.
+- **Consistent formatting of like content.** Dates, numbers, currency, and units should be formatted the same way everywhere they appear — flag inconsistent formats across the same screen or flow (e.g. "Jan 5, 2026" in one place and "01/05/2026" in another).
+- **Tooltips and helper text add value.** Flag helper text that just repeats the label with no additional information, and flag critical information hidden only in a tooltip that a user might never open.
+
+### Localization-friendliness (best practice)
+This can only be partially assessed from a static screen, but flag obvious risk signals:
+- Copy that looks like it's assembled from concatenated fragments (e.g. "You have 3 item(s) remaining") rather than a single natural sentence — these break in translation and pluralization.
+- Idioms, culturally specific references, or wordplay that wouldn't translate cleanly, if the product context suggests a global or multi-region audience.
+- Text containers that look like they'd break or truncate awkwardly if the copy were 30–50% longer, as it typically would be in many other languages.
+
+### What this skill cannot verify from a screenshot
+Note these as reminders rather than findings when relevant, rather than silently skipping them:
+- Copy across states/flows not shown in the provided screenshot(s) (e.g. the full error-message set, all empty-state variants)
+- Whether terminology is consistent with a broader content style guide not provided in context
+- Actual screen-reader-announced text where it may differ from visible text
+- Reading-level scoring (this requires the actual extracted text run through a formula, not visual assessment)
+
+### Writing the finding
+Cite either the context point that grounds the finding, or a named content-design principle when it's heuristic (e.g. "front-loading," "plain language," "specific over generic CTAs"). Tier guidance:
+- **Must-fix** — copy that would actively confuse or block a user (a dead-end error with no next step, a CTA whose action is genuinely ambiguous, tone that clearly clashes with a stated professional/compliance-sensitive audience).
+- **Should-consider** — copy that works but could mislead or slow users down (a generic label where specificity would help, inconsistent terminology across two screens, a vague empty state).
+- **Nice-to-have** — polish-level wording improvements (tightening a sentence, adjusting formatting for scannability, minor tone smoothing).`,
   },
 ]
