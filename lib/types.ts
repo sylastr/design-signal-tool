@@ -256,10 +256,86 @@ Cite the specific WCAG success criterion (number and name) whenever a finding ma
   {
     id: "hierarchy",
     name: "Visual Hierarchy & Layout",
-    description: "Assesses Gestalt grouping, typographic scale, and scanning order.",
+    description:
+      "Assesses whether a screen's composition guides the eye correctly — using Gestalt principles, typographic scale, and scanning order — independent of whether it uses TR's specific brand tokens. Use for reviewing how well a layout communicates priority and structure, regardless of design system compliance.",
     active: false,
-    instructions:
-      "Assess visual hierarchy and layout using Gestalt principles (proximity, similarity, common region, continuity, figure/ground) and typographic scale. Evaluate whether the primary action is the most salient element, whether grouping reflects real relationships, whether alignment and spacing follow a consistent grid, and whether contrast and size guide the eye in priority order. Flag competing focal points and weak scanning paths.",
+    instructions: `You are evaluating visual composition and hierarchy — whether the arrangement of elements on screen helps a user quickly understand what's important, what's related, and where to look first. This is a general design-quality lens, not a brand-compliance check. A screen can use every correct Saffron token and still have weak hierarchy (everything the same visual weight, no clear entry point); a screen can also have strong hierarchy while using an off-token spacing value. Judge composition quality on its own terms.
+
+Cite the specific Gestalt principle or hierarchy concept behind each finding (e.g. "violates proximity — these unrelated fields sit closer together than the fields they actually belong with") rather than a vague "layout feels off." If a finding could be read either way depending on intent the screenshot doesn't reveal, say so and lower the tier.
+
+**How this complements the other skills — don't duplicate them:**
+- **Saffron Design System** checks whether specific values (exact spacing tokens, exact type tokens, exact colors, the 12-column grid, component instances) match TR's documented system. This skill checks whether the *composition* works, regardless of which system or exact values produced it. If you notice a spacing or color choice that looks like it might be an off-token value, that's Saffron's finding to make — your job here is only to note whether the *visual effect* of that choice helps or hurts hierarchy and grouping.
+- **Heuristic Usability** (aesthetic/minimalist heuristic and CTA-hierarchy heuristic) looks at whether content is *necessary* and whether there's one primary action from a usability-workflow angle. This skill looks at whether the composition *visually communicates* priority through size, weight, contrast, and placement — the "how it reads," not the "should it be there."
+- **Content & Microcopy** looks at wording. This skill looks at typographic *scale and weight as a visual system* (are there clear, consistent size/weight steps) — not whether the words themselves are well-chosen.
+- **Accessibility** checks contrast for legibility/WCAG compliance. This skill checks contrast and size as tools for *directing attention* — a hierarchy problem can exist even where contrast is technically AA-compliant (e.g. a heading and a button both styled with equally strong, fully-compliant contrast, so neither wins visual priority).
+
+### Primary focal point
+- Identify what the eye lands on first. Flag a screen with no clear focal point — where several elements compete equally for attention (similar size, similar weight, similar color intensity) with no single element reading as most important.
+- Flag a mismatch between visual priority and actual task priority — e.g. a promotional banner or decorative element rendered more visually dominant than the actual primary action the user came to complete.
+- Check that the primary action is differentiated by more than one cue (size, color intensity, position) rather than relying on a single subtle cue that could be missed.
+
+### Gestalt: proximity
+Elements placed close together are perceived as related; elements spaced apart are perceived as separate.
+- Flag spacing that misrepresents actual relationships — a label sitting closer to the wrong field, or unrelated controls grouped so tightly they read as one unit.
+- Flag inconsistent group spacing — if two sections use different amounts of internal spacing to represent the "same kind" of grouping, the grouping logic becomes unclear.
+
+### Gestalt: similarity
+Elements that share visual style (shape, color, size) are perceived as serving the same function or belonging to the same category.
+- Flag visually identical treatment applied to elements that do different things (two buttons that look the same but one submits and one cancels/deletes, with no differentiation).
+- Flag visually different treatment applied to elements that do the same thing (the same type of action styled differently in two places, implying they're unrelated when they're not).
+
+### Gestalt: common region
+A shared boundary — a card, a background fill, a border — reads as "these things belong together."
+- Flag content that's logically grouped but has no shared visual container, making the grouping unclear at a glance.
+- Flag a shared container (a card or panel) that holds unrelated content, implying a false relationship.
+
+### Gestalt: continuity
+The eye follows aligned edges and consistent lines; a clean, continuous line or edge is easier to track than a broken one.
+- Flag layouts where edges don't align across a row or column when they visually should (e.g. a set of cards or list items with inconsistent left edges), forcing the eye to reset instead of flowing naturally.
+- Flag a layout where the natural reading path is interrupted by an element breaking the established alignment without clear reason.
+
+### Gestalt: figure/ground
+Content should read clearly as foreground against its background; the two shouldn't compete or blend.
+- Flag low differentiation between a content element and its background (e.g. a card that barely separates from the page background, a button that blends into a similarly-toned surface behind it).
+- Flag busy or heavy backgrounds that compete with foreground content rather than supporting it.
+
+### Gestalt: closure
+The eye fills in gaps to perceive a complete shape or pattern, but only up to a point.
+- Flag icons, dividers, or partial elements that are ambiguous rather than reading clearly as an intended, recognizable shape or pattern.
+- This is a minor, usually nice-to-have check — flag only when incompleteness actively causes confusion, not for stylistic minimalism that's clearly intentional.
+
+### Typographic scale & hierarchy
+- Check that there's a clear, limited set of size/weight steps establishing a visual ladder from most to least important (e.g. a heading, a subheading, and body text should each read as visually distinct levels). Flag a screen with too many competing size/weight variations with no clear ladder, or too few steps to distinguish importance at all.
+- Flag a heading that doesn't visually outrank the body text it introduces, or a secondary label that's rendered as visually loud as the primary heading.
+- Check that emphasis (bold, color, size increase) is reserved for genuinely important content — flag overuse of emphasis that flattens the hierarchy (if everything is bold, nothing stands out).
+
+### Scanning order & visual flow
+- Consider how the eye would naturally travel across the screen (commonly left-to-right, top-to-bottom, or a Z-pattern for sparse layouts / F-pattern for text-dense layouts) and check whether the layout supports that path toward the most important content and actions.
+- Flag a layout where the visual path leads the eye away from the primary action, or where important content sits in a location a natural scanning pattern would skip or reach last.
+- Flag competing scanning paths — e.g. two separate visual flows on the same screen pulling the eye in different directions with no clear priority between them.
+
+### Alignment & grid consistency
+- Check that elements align to a consistent underlying structure — columns, a shared left edge, consistent card widths. This is about *whether a consistent grid is followed*, not what the specific grid values are (that's Saffron's job). Flag visible misalignment: elements that don't line up with their neighbors when they visually should.
+- Flag inconsistent column widths or gutter widths across what should be a repeating structure (e.g. a card grid where some cards are wider than others with no apparent reason).
+
+### Balance & visual weight distribution
+- Check whether visual weight (size, color saturation, density of content) is reasonably distributed across the screen, or whether it's lopsided in a way that feels unintentional (e.g. one side of the screen dense and dark, the other sparse and empty, with no compositional reason).
+- Flag a screen that feels top-heavy, bottom-heavy, or off-balance in a way that could be resolved with better distribution of elements.
+
+### Competing focal points
+- Flag more than one element on the same screen competing for "most important" status — e.g. two differently-colored, similarly-sized call-to-action elements, or a promotional element rendered with equal or greater visual force than the primary task action.
+
+### What this skill cannot verify from a screenshot
+Note these as reminders rather than findings when relevant:
+- Whether hierarchy holds up across responsive breakpoints not shown in the provided screenshot(s)
+- Whether the visual weight of an element reflects actual business priority (that requires product context, not just visual inspection)
+- Motion/animation-based hierarchy cues (e.g. something drawing attention via animation) that a static image can't show
+
+### Writing the finding
+Name the specific Gestalt principle or hierarchy concept in every finding. Tier guidance:
+- **Must-fix** — no discernible focal point on a screen that clearly needs one, or a hierarchy inversion that actively misdirects the user (a secondary/decorative element visually outranking the primary action).
+- **Should-consider** — a real grouping or alignment issue that adds friction but doesn't block the task (inconsistent spacing implying unclear relationships, a scanning path that's slightly inefficient).
+- **Nice-to-have** — minor polish (small alignment inconsistencies, closure ambiguity in a decorative element, slightly uneven visual balance).`,
   },
   {
     id: "tr-brand",
