@@ -94,7 +94,7 @@ export const DEFAULT_SKILLS: Skill[] = [
     id: "heuristic",
     name: "Heuristic Usability",
     description:
-      "Evaluates a screen against Jakob Nielsen's 10 usability heuristics — system status, real-world match, user control, consistency, error prevention/recovery, recognition over recall, flexibility, minimalism, and help — based on what's visible in the uploaded screenshot(s). Use for general interaction and workflow quality review, independent of brand styling, wording, or accessibility conformance.",
+      "Evaluates a screen against Jakob Nielsen's 10 usability heuristics — system status, consistency, error prevention, recognition over recall, and more.",
     active: false,
     instructions: `You are evaluating interaction and workflow design against Nielsen's 10 heuristics, based only on what's visible in the screenshot(s) provided. A single static image can't show you dynamic behavior — what happens on click, how long something takes to load, whether an undo actually works, or whether a shortcut exists. Where a heuristic depends on behavior you can't observe, say so and frame the finding as a question to verify ("it's unclear whether this action can be undone — confirm during testing") rather than asserting a pass or fail.
 
@@ -187,7 +187,7 @@ Name the specific heuristic (number and short name) in every finding. Tier guida
     id: "a11y",
     name: "Accessibility (WCAG 2.1 AA + AODA)",
     description:
-      "Checks a screen against WCAG 2.1 Level AA success criteria, AODA/Ontario compliance expectations, and broader inclusive-design best practice — based on what's visible in the uploaded screenshot. Use for any product that needs to meet accessibility compliance or serve users with visual, motor, or cognitive disabilities.",
+      "Checks a screen against WCAG 2.1 Level AA success criteria, AODA/Ontario compliance expectations, and broader inclusive-design best practice.",
     active: false,
     instructions: `You are evaluating a static screenshot for accessibility. This is a meaningful limitation, and you must be upfront about it: a screenshot cannot reveal alt text, ARIA labels, semantic HTML/heading structure, keyboard focus order, screen reader announcement text, or programmatic label associations. Real conformance requires code-level and assistive-technology testing. Do not claim a page "passes" or "fails" any criterion that depends on code you cannot see — instead, either flag what's visually diagnosable, or note the item under "cannot verify visually" as a reminder to test manually. Treat contrast ratios you estimate from the image as approximate, not measured — say "appears to fail" or "looks borderline," not "measures 2.8:1."
 
@@ -257,7 +257,7 @@ Cite the specific WCAG success criterion (number and name) whenever a finding ma
     id: "hierarchy",
     name: "Visual Hierarchy & Layout",
     description:
-      "Assesses whether a screen's composition guides the eye correctly — using Gestalt principles, typographic scale, and scanning order — independent of whether it uses TR's specific brand tokens. Use for reviewing how well a layout communicates priority and structure, regardless of design system compliance.",
+      "Assesses whether a screen's composition guides the eye — using Gestalt grouping, typographic scale, and scanning order — to communicate priority and structure.",
     active: false,
     instructions: `You are evaluating visual composition and hierarchy — whether the arrangement of elements on screen helps a user quickly understand what's important, what's related, and where to look first. This is a general design-quality lens, not a brand-compliance check. A screen can use every correct Saffron token and still have weak hierarchy (everything the same visual weight, no clear entry point); a screen can also have strong hierarchy while using an off-token spacing value. Judge composition quality on its own terms.
 
@@ -462,7 +462,7 @@ For every flagged item in this skill, the rationale must name the specific Saffr
     id: "jtbd",
     name: "Jobs-to-be-Done",
     description:
-      "Frames critique around the user's core job and moment of decision: what progress they're trying to make, whether the design advances or obstructs it, and whether secondary tasks distract from the primary one. Requires clear context about the target user, their circumstance, and their goal — if context doesn't establish this, say so rather than inventing a job.",
+      "Frames critique around the user's core job and moment of decision — whether the design advances the progress they're actually trying to make. Needs clear user context.",
     active: false,
     instructions: `Jobs-to-be-Done is fundamentally a context-driven lens, more than any of the other skills. The premise (Clayton Christensen's framing, refined by Bob Moesta and Tony Ulwick) is that people don't want a product — they want to make progress in a specific circumstance, and they "hire" a design or feature to help. You cannot infer that circumstance from a screenshot alone. Every finding in this skill should trace back to a specific piece of supplied context (the audience, their goal, the situation they're in, what they were doing before this screen). Where context doesn't establish the job clearly, don't fabricate one — say explicitly that the job is unclear from the available context and that findings here will be limited until it's provided. A speculative "job" invented from the screenshot alone is worse than no finding at all, because it will read as authoritative when it isn't grounded in anything.
 
@@ -519,7 +519,7 @@ If the target user, their circumstance, or their goal isn't established clearly 
     id: "content",
     name: "Content & Microcopy",
     description:
-      "Evaluates the actual wording visible in a screen — voice, clarity, labels, CTAs, error and empty-state copy — against UX writing best practice and the product's stated audience. Use for any screen where the words themselves (not just the visual design) need review.",
+      "Evaluates the actual wording in a screen — voice, clarity, labels, CTAs, and error and empty-state copy — against UX writing best practice and the stated audience.",
     active: false,
     instructions: `You are evaluating the words visible in a screenshot, not the underlying content strategy or a full content style guide. You only have what's legible in the image plus whatever project context has been provided. Don't invent or guess at copy that isn't shown (e.g. don't assume what an error message says if it isn't visible, and don't assess tone across a full user journey you haven't been shown screens for). If a string is truncated, cut off, or too small to read confidently, say so rather than guessing at its meaning.
 
