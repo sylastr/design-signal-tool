@@ -64,7 +64,7 @@ export function SetupContextsPane({
       }
       setText((prev) => (prev.trim() ? `${prev.trim()}\n\n${joined}` : joined))
     } catch {
-      setImportError("Couldn't read that file. Supported: PDF, TXT, DOCX.")
+      setImportError("Couldn't read that file. Supported: PDF, TXT, MD, DOCX.")
     } finally {
       setImporting(false)
     }
@@ -143,7 +143,7 @@ export function SetupContextsPane({
               )}
               {importing ? "Reading…" : "Upload file"}
             </button>
-            <span className="text-[11px] text-gray-3">Appends text from PDF, TXT, or Word</span>
+            <span className="text-[11px] text-gray-3">Appends text from PDF, TXT, MD, or Word</span>
             {importError && (
               <p role="status" className="w-full text-[11px] leading-relaxed text-tr-red">
                 {importError}
