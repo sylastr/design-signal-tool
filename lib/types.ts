@@ -100,11 +100,73 @@ export const DEFAULT_SKILLS: Skill[] = [
   },
   {
     id: "a11y",
-    name: "Accessibility (WCAG 2.1 AA)",
-    description: "Audits contrast, focus, target size, and WCAG 2.1 AA criteria.",
+    name: "Accessibility (WCAG 2.1 AA + AODA)",
+    description:
+      "Checks a screen against WCAG 2.1 Level AA success criteria, AODA/Ontario compliance expectations, and broader inclusive-design best practice — based on what's visible in the uploaded screenshot. Use for any product that needs to meet accessibility compliance or serve users with visual, motor, or cognitive disabilities.",
     active: false,
-    instructions:
-      "Audit against WCAG 2.1 AA. Check color contrast (4.5:1 for normal text, 3:1 for large text and UI components), visible focus indicators, target size (min 24x24px), text alternatives for non-text content, information not conveyed by color alone, logical heading/reading order, and form labels. Cite the specific success criterion (e.g. 1.4.3 Contrast, 2.4.7 Focus Visible, 1.4.1 Use of Color) for each finding.",
+    instructions: `You are evaluating a static screenshot for accessibility. This is a meaningful limitation, and you must be upfront about it: a screenshot cannot reveal alt text, ARIA labels, semantic HTML/heading structure, keyboard focus order, screen reader announcement text, or programmatic label associations. Real conformance requires code-level and assistive-technology testing. Do not claim a page "passes" or "fails" any criterion that depends on code you cannot see — instead, either flag what's visually diagnosable, or note the item under "cannot verify visually" as a reminder to test manually. Treat contrast ratios you estimate from the image as approximate, not measured — say "appears to fail" or "looks borderline," not "measures 2.8:1."
+
+Every finding must cite the specific criterion involved (e.g. "WCAG 1.4.3 Contrast (Minimum)" or "WCAG 3.3.2 Labels or Instructions") rather than a vague "accessibility issue." Where a finding is genuinely just a best-practice recommendation rather than a WCAG failure, say so and don't overstate it as a compliance violation.
+
+Regulatory context. WCAG 2.1 Level AA is the baseline this skill checks against — it's also the standard referenced by the ADA (US), Section 508 (US federal), and EN 301 549 (EU). AODA (Accessibility for Ontarians with Disabilities Act) legally requires WCAG 2.0 Level AA for most Ontario organizations under the Integrated Accessibility Standards Regulation — meeting 2.1 AA automatically satisfies AODA's WCAG requirement and is the safer target given 2.0 is being phased out as a reference standard. If the project context indicates an Ontario/Canadian public sector or large private-sector audience, treat AODA as an additional compliance driver, not a separate rule set — the same findings apply.
+
+### Color & contrast
+- **Text contrast (WCAG 1.4.3).** Normal-sized text needs roughly 4.5:1 contrast against its background; large text (approximately 18pt/24px regular or 14pt/19px bold and above) needs roughly 3:1. Flag any text that looks low-contrast against its background — light gray on white, white on a pale accent color, or a subtle color-on-color combination are the most common failures. This is must-fix when the gap looks clearly insufficient (e.g. light gray placeholder-style text used as real body copy), should-consider when it looks borderline.
+- **Non-text contrast (WCAG 1.4.11).** Interactive component boundaries (button outlines, input borders, toggle states) and meaningful graphics/icons need roughly 3:1 contrast against their background. Flag faint borders on form fields, low-contrast icons, or buttons that are only distinguishable by a very subtle color shift.
+- **Disabled states are exempt.** Don't flag contrast on elements that are clearly in a disabled/inactive state — reduced contrast is expected and intentional there.
+- **Color is never the only signal (WCAG 1.4.1).** Flag any place where status, selection, required-field marking, or error state is communicated by color alone with no icon, text label, or pattern reinforcing it (e.g. a red field border with no error message or icon, a chart that distinguishes categories only by hue).
+- **Focus indicators use more than color (best practice, supports 2.4.7).** If a focus/selected state is visible in the screenshot, check that it's marked by a visible outline or shape change, not just a color shift — a color-only focus ring is invisible to colorblind users.
+
+### Text & readability
+- **Resizing and reflow (WCAG 1.4.4, 1.4.10).** Text and containers should look like they'd tolerate being reflowed or enlarged without clipping or requiring horizontal scrolling. Flag fixed-height containers with text that looks like it's already close to being clipped or truncated, and flag any layout that looks like it would only work at one exact viewport size.
+- **Text spacing (WCAG 1.4.12).** Line height, paragraph spacing, and letter spacing should be comfortable — flag text that looks visually cramped (tight line height, no space between paragraphs) since users who override spacing settings need the layout to survive it.
+- **Images of text (WCAG 1.4.5).** Flag real content (headings, body copy, labels) that appears to be baked into an image rather than live text — this can't be resized, selected, or read by a screen reader. Logos and purely decorative text-in-image are fine.
+- **Justified/centered body text (best practice).** Flag large blocks of justified text (uneven word spacing) or centered paragraphs longer than a line or two — both reduce readability, especially for users with dyslexia or low vision.
+- **Line length.** Very long text lines (reading across a wide, unconstrained container) are harder to track — flag paragraphs that run edge-to-edge in a wide layout with no max-width applied.
+
+### Structure & navigation
+- **Meaningful, visible hierarchy (supports 1.3.1, 2.4.6).** Headings and labels should be visually distinct and descriptive at a glance — flag a screen with no clear heading hierarchy, or headings/labels that are vague ("Details," "Info") rather than descriptive of their content.
+- **Reading order matches visual order (WCAG 1.3.2).** Flag any layout where the visual arrangement looks like it would produce a confusing or out-of-order reading sequence for a screen reader (e.g. content visually reordered with CSS in a way that looks disconnected from its logical grouping, such as a caption appearing before its image while reading left-to-right, top-to-bottom would suggest otherwise).
+- **Consistent navigation and identification (WCAG 3.2.3, 3.2.4).** The same nav structure, icons, and component labeling should appear in the same way across every screen in the flow — flag a control that's labeled or iconed differently for the same function on different screens.
+- **Instructions don't rely on sensory characteristics alone (WCAG 1.3.3).** Flag instructional copy that depends only on shape, color, or position ("click the round green button," "see the box on the right") without also naming the control.
+
+### Interactive elements & forms
+- **Visible labels (WCAG 3.3.2, best practice).** Every input should have a persistent, visible label — not just placeholder text that disappears once the user starts typing. Flag any field where the only visible label is placeholder text sitting inside the input.
+- **Error identification (WCAG 3.3.1).** Error states should be visually flagged in a way that's more than color alone (an icon or explicit message), and the message should appear near the field it relates to, not only in a summary far away. Flag missing or purely color-based error indication, and flag errors that seem to lack any descriptive message.
+- **Error prevention on important actions (WCAG 3.3.4, best practice).** For irreversible or high-consequence actions (delete, submit, payment), flag the absence of a confirmation step or clear warning if the screenshot suggests a one-click destructive action with no visible safeguard.
+- **Target size (WCAG 2.2's 2.5.8, best practice under 2.1).** Interactive controls should look comfortably tappable — roughly 24×24px minimum, with adequate spacing between adjacent targets. Flag icon-only buttons, checkboxes, or nav items that look small and tightly packed together. This isn't a 2.1 AA requirement itself but is treated as current best practice and is already required by newer standards.
+- **Icon-only controls need a discernible name (supports 2.4.6, 4.1.2).** Flag any icon-only button where the icon's meaning is ambiguous and there's no visible tooltip or label — a screen reader user needs an accessible name you can't see in the screenshot, so note this as a "verify programmatic label" reminder rather than a hard fail.
+- **Focus visibility (WCAG 2.4.7).** If the screenshot shows a focused element, check that focus is clearly visible (a distinct outline or highlight). If no focus state is shown in the provided image, note that focus-visible states should be verified separately — don't assume a pass or fail.
+
+### Motion, media & timing
+- **Pause/stop/hide for moving content (WCAG 2.2.2).** Flag any auto-playing carousel, animation, or video that doesn't appear to have a visible pause or stop control.
+- **Flashing content (WCAG 2.3.1).** Flag any content that looks like it flashes or strobes rapidly (more than roughly 3 times per second) — this is a seizure-risk must-fix if present.
+- **Captions and transcripts (WCAG 1.2.2, best practice).** If a video player is visible, flag the absence of a visible captions control.
+- **Reduced motion consideration (best practice).** For designs with significant animation or parallax, note as a should-consider that a reduced-motion variant should be available for users with vestibular sensitivity — this can't be confirmed from a static screenshot, so frame it as a recommendation, not a finding.
+
+### Cognitive & inclusive design
+- **Plain language.** Flag dense jargon, unnecessarily complex phrasing, or long unbroken paragraphs where simpler, shorter language would serve the same purpose — this is best practice supporting WCAG 3.1.5 (Reading Level) at the AAA tier, worth flagging as should-consider even though it isn't a hard AA requirement.
+- **Chunking and cognitive load.** Flag screens that present a large amount of information or many decisions at once with no visual grouping, progressive disclosure, or step-by-step structure.
+- **Consistent, predictable icons and terminology.** The same icon or term should always mean the same thing throughout the product — flag inconsistent icon usage or terminology for the same action or concept (this also supports WCAG 3.2.4).
+- **Generous, forgiving interaction design.** Favor designs that don't require precise timing, drag gestures, or fine motor precision without an alternative — flag interactions that look like they'd be difficult without a mouse or with limited dexterity (e.g. a slider with no visible alternative input, a drag-and-drop reorder with no visible up/down button alternative).
+
+### What this skill cannot verify from a screenshot
+Always note these as reminders rather than pass/fail findings when they're relevant to the screen in scope — do not silently skip them:
+- Alt text on meaningful images
+- ARIA roles, states, and properties
+- Programmatic label-to-input association
+- Keyboard focus order and full keyboard operability
+- Screen reader announcement behavior
+- Page language and semantic HTML structure (heading levels, landmarks)
+- Exact measured contrast ratios
+
+Phrase these as: "Cannot be confirmed from a screenshot — verify with a code-level accessibility audit or screen reader test."
+
+### Writing the finding
+Cite the specific WCAG success criterion (number and name) whenever a finding maps to one; use "best practice" framing when it doesn't. Tier guidance:
+- **Must-fix** — clear, high-confidence WCAG AA failures visible in the screenshot (e.g. placeholder-only labels, color-only error states, visibly flashing content, clearly insufficient text contrast).
+- **Should-consider** — borderline or likely issues that need confirmation (e.g. contrast that looks marginal, small touch targets, ambiguous icon-only controls).
+- **Nice-to-have** — best-practice improvements beyond strict AA compliance (plain-language rewrites, reduced-motion variants, generous spacing beyond the minimum).`,
   },
   {
     id: "hierarchy",
