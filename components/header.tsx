@@ -21,7 +21,7 @@ export function Header({ onOpenSetup }: { onOpenSetup?: () => void }) {
               Design Signal
             </span>
             <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-gray-4">
-              design review Assistant, on the spot
+              AI design review Assistant
             </span>
           </div>
         </div>
