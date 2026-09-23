@@ -18,7 +18,7 @@ export function Header({ onOpenSetup }: { onOpenSetup?: () => void }) {
           </div>
           <div className="flex flex-col leading-none">
             <span className="text-[17px] font-bold tracking-tight text-graphite">
-              Design Signal
+              Design Signal Tool
             </span>
             <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-gray-4">
               design review Assistant, on the spot
