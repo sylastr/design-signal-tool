@@ -9,7 +9,7 @@ export function Header({ onOpenSetup }: { onOpenSetup?: () => void }) {
         <div className="flex items-center gap-3">
           {/* TR logo mark */}
           <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center bg-racing-green"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-racing-green"
             aria-hidden
           >
             <span className="text-[15px] font-bold leading-none tracking-tight text-white">
